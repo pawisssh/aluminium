@@ -11,3 +11,7 @@ Uses the default labels: `needs-triage`, `needs-info`, `ready-for-agent`, `ready
 ### Domain docs
 
 Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+
+## Tools
+
+`tools/<name>/` holds standalone apps, each with its own `package.json` and `README.md`. Run `npm run check` in one before committing; CI (`.github/workflows/check.yml`) runs the same.

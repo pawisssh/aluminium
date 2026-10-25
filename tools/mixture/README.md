@@ -7,6 +7,8 @@ npm install
 npm run dev        # http://localhost:5173
 npm test           # core logic: src/core
 npm run typecheck
+npm run check      # typecheck, tests, lint, glossary terms: what CI runs
+npm run probe -- <file>  # a test file with console.log shown (vitest hides it by default)
 ```
 
 - `src/core/mix.ts`: `buildMix` turns Plan values into a Mix (largest-remainder cell counts, one edge-joined piece per Plan colour, Random or Ordered layout).

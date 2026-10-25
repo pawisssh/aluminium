@@ -9,7 +9,9 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "test": "vitest run",
-    "typecheck": "tsc -b --noEmit"
+    "typecheck": "tsc -b --noEmit",
+    "probe": "vitest run --silent=false",
+    "check": "tsc -b --noEmit && vitest run && oxlint --deny-warnings && node ../../scripts/check-glossary.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
