@@ -92,7 +92,8 @@ describe('buildMix', () => {
   })
 
   describe.each(['random', 'ordered'] as const)('%s layout', (mode) => {
-    it.each([4, 8] as const)('keeps each Plan colour in one piece joined by edges (size %i)', (size) => {
+    // An ordered 4×4 Mix fills its halves one after the other, so a colour can split across them.
+    it.each(mode === 'ordered' ? ([8] as const) : ([4, 8] as const))('keeps each Plan colour in one piece joined by edges (size %i)', (size) => {
       const palette = [purple, green, yellow, { family: 'blue', tint: 100 }, { family: 'navy', tint: 100 }] as const
       for (let trial = 0; trial < 200; trial++) {
         // A spread of portfolios: 1 to 5 colours with uneven values.
@@ -134,6 +135,21 @@ describe('buildMix', () => {
     const a = buildMix(slices, 4, { mode: 'ordered', seed: 'a' })
     expect(buildMix(slices, 4, { mode: 'ordered', seed: 'b' })).toEqual(a)
     expect(a.cells[0]![0]).toBe('purple-100')
+  })
+
+  it('fills an ordered 4×4 Mix left half first, each half row by row from its top-left', () => {
+    const slices = [
+      { value: 59, colour: purple },
+      { value: 25, colour: green },
+      { value: 16, colour: yellow },
+    ]
+    const short = (key: string | null) => key![0]!.toUpperCase()
+    expect(buildMix(slices, 4, { mode: 'ordered', seed: 'a' }).cells.map((row) => row.map(short).join(''))).toEqual([
+      'PPPG',
+      'PPGG',
+      'PPGY',
+      'PPYY',
+    ])
   })
 
   it('leaves every cell empty when the Plans have no value', () => {
