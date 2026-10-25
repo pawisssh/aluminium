@@ -7,7 +7,8 @@ on:
 
 jobs:
   mixture:
-    runs-on: ubuntu-latest
+    # The self-hosted runner on Kane's Mac (~/actions-runner-aluminium).
+    runs-on: [self-hosted, aluminium]
     defaults:
       run:
         working-directory: tools/mixture
