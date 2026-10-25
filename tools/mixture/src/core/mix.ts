@@ -19,7 +19,7 @@ export interface Mix {
 const RANDOM_ATTEMPTS = 50
 
 export function buildMix(slices: MixSlice[], size: MixSize, options: { mode: MixMode; seed: string }): Mix {
-  const { shares, hidden } = allocate(slices, size * size)
+  const { shares, hidden } = allocate(slices, size * size, options.mode)
   const rng = createRng(options.seed)
   let cells: (string | null)[][] | null = null
   for (let i = 0; options.mode === 'random' && !cells && i < RANDOM_ATTEMPTS; i++) cells = growRegions(shares, size, rng)
@@ -122,13 +122,28 @@ interface Share {
   cells: number
 }
 
-/** Largest-remainder split of `total` cells between Plan colours by value, largest colour first. */
-function allocate(slices: MixSlice[], total: number): { shares: Share[]; hidden: number } {
+/**
+ * Splits `total` cells between Plan colours by value, largest colour first. In an ordered Mix a
+ * colour with more than half the value but less than three quarters takes exactly the left half,
+ * and the other colours split the right half.
+ */
+function allocate(slices: MixSlice[], total: number, mode: MixMode): { shares: Share[]; hidden: number } {
   const byKey = new Map<string, number>()
   for (const s of slices) {
     if (s.value > 0) byKey.set(colourKey(s.colour), (byKey.get(colourKey(s.colour)) ?? 0) + s.value)
   }
   const ranked = [...byKey].sort((a, b) => b[1] - a[1])
+  const [top] = ranked
+  const topShare = top ? top[1] / ranked.reduce((a, [, value]) => a + value, 0) : 0
+  if (mode === 'ordered' && topShare > 0.5 && topShare < 0.75) {
+    const rest = split(ranked.slice(1), total / 2)
+    return { shares: [{ key: top![0], cells: total / 2 }, ...rest.shares], hidden: rest.hidden }
+  }
+  return split(ranked, total)
+}
+
+/** Largest-remainder split of `total` cells between colours ranked largest first. */
+function split(ranked: [string, number][], total: number): { shares: Share[]; hidden: number } {
   const kept = ranked.slice(0, total)
   const sum = kept.reduce((a, [, value]) => a + value, 0)
   const shares = kept.map(([key, value]) => {

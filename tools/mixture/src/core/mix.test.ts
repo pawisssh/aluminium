@@ -137,17 +137,31 @@ describe('buildMix', () => {
     expect(a.cells[0]![0]).toBe('purple-100')
   })
 
+  const short = (cells: (string | null)[][]) => cells.map((row) => row.map((key) => key![0]!.toUpperCase()).join(''))
+
   it.each([
-    [4, ['PPPG', 'PPGG', 'PPGY', 'PPYY']],
-    [8, ['PPPPPPPP', 'PPPPPPGG', 'PPPPGGGG', 'PPPPGGGG', 'PPPPGGGG', 'PPPPGGYY', 'PPPPYYYY', 'PPPPYYYY']],
-  ] as const)('fills an ordered %i×%i Mix left half first, each half row by row from its top-left', (size, rows) => {
+    [4, ['PPGG', 'PPGG', 'PPGY', 'PPYY']],
+    [8, ['PPPPGGGG', 'PPPPGGGG', 'PPPPGGGG', 'PPPPGGGG', 'PPPPGGGG', 'PPPPYYYY', 'PPPPYYYY', 'PPPPYYYY']],
+  ] as const)(
+    'gives an ordered Mix colour with 50–75% of the value just the left half, and splits the right half between the rest (size %i)',
+    (size, rows) => {
+      // Purple 59% fills the left half; green and yellow split the right half 25:16.
+      const slices = [
+        { value: 59, colour: purple },
+        { value: 25, colour: green },
+        { value: 16, colour: yellow },
+      ]
+      expect(short(buildMix(slices, size, { mode: 'ordered', seed: 'a' }).cells)).toEqual(rows)
+    },
+  )
+
+  it('fills an ordered Mix left half first, each half row by row from its top-left, once a colour passes 75%', () => {
+    // Purple 80% of 16 cells is 12.8: the left half, then on into the right half.
     const slices = [
-      { value: 59, colour: purple },
-      { value: 25, colour: green },
-      { value: 16, colour: yellow },
+      { value: 80, colour: purple },
+      { value: 20, colour: green },
     ]
-    const short = (key: string | null) => key![0]!.toUpperCase()
-    expect(buildMix(slices, size, { mode: 'ordered', seed: 'a' }).cells.map((row) => row.map(short).join(''))).toEqual(rows)
+    expect(short(buildMix(slices, 4, { mode: 'ordered', seed: 'a' }).cells)).toEqual(['PPPP', 'PPPP', 'PPPG', 'PPGG'])
   })
 
   it('leaves every cell empty when the Plans have no value', () => {
