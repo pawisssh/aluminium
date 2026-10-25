@@ -1,0 +1,14 @@
+# Mixture
+
+A playground for how a Portfolio's allocation reads as a **Mix** (a 4×4 or 8×8 grid of Plan colours) and how each Plan's **Brick** looks. Terms are defined in the repo's [`GLOSSARY.md`](../../GLOSSARY.md).
+
+```bash
+npm install
+npm run dev        # http://localhost:5173
+npm test           # core logic: src/core
+npm run typecheck
+```
+
+- `src/core/mix.ts`: `buildMix` turns Plan values into a Mix (largest-remainder cell counts, one edge-joined piece per Plan colour, Random or Ordered layout).
+- `src/core/brick.ts`: `generateBrick` draws a 4×4 Brick with the Pattern Builder's generator, vendored in `src/vendor/fnm-core` (see its README).
+- Plan colours come from neon `theme/tokens/colors.json`; the light theme from `theme.json`.
