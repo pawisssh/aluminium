@@ -91,21 +91,21 @@ describe('buildMix', () => {
     expect(mix.hiddenColours).toBe(4)
   })
 
-  describe.each(['random', 'ordered'] as const)('%s layout', (mode) => {
-    // An ordered 4×4 Mix fills its halves one after the other, so a colour can split across them.
-    it.each(mode === 'ordered' ? ([8] as const) : ([4, 8] as const))('keeps each Plan colour in one piece joined by edges (size %i)', (size) => {
-      const palette = [purple, green, yellow, { family: 'blue', tint: 100 }, { family: 'navy', tint: 100 }] as const
-      for (let trial = 0; trial < 200; trial++) {
-        // A spread of portfolios: 1 to 5 colours with uneven values.
-        const n = 1 + (trial % palette.length)
-        const slices = palette.slice(0, n).map((colour, i) => ({ value: 1 + ((trial * 37 + i * 101) % 97), colour }))
-        const mix = buildMix(slices, size, { mode, seed: `t${trial}` })
-        for (const key of new Set(mix.cells.flat())) {
-          expect(pieces(mix.cells, key!), `${key} in trial ${trial}`).toBe(1)
-        }
+  // An ordered Mix fills its halves one after the other, so a colour can split across them.
+  it.each([4, 8] as const)('keeps each Plan colour in one piece joined by edges in a random Mix (size %i)', (size) => {
+    const palette = [purple, green, yellow, { family: 'blue', tint: 100 }, { family: 'navy', tint: 100 }] as const
+    for (let trial = 0; trial < 200; trial++) {
+      // A spread of portfolios: 1 to 5 colours with uneven values.
+      const n = 1 + (trial % palette.length)
+      const slices = palette.slice(0, n).map((colour, i) => ({ value: 1 + ((trial * 37 + i * 101) % 97), colour }))
+      const mix = buildMix(slices, size, { mode: 'random', seed: `t${trial}` })
+      for (const key of new Set(mix.cells.flat())) {
+        expect(pieces(mix.cells, key!), `${key} in trial ${trial}`).toBe(1)
       }
-    })
+    }
+  })
 
+  describe.each(['random', 'ordered'] as const)('%s layout', (mode) => {
     it('gives the same Mix for the same seed', () => {
       const slices = [
         { value: 50, colour: purple },
@@ -137,19 +137,17 @@ describe('buildMix', () => {
     expect(a.cells[0]![0]).toBe('purple-100')
   })
 
-  it('fills an ordered 4×4 Mix left half first, each half row by row from its top-left', () => {
+  it.each([
+    [4, ['PPPG', 'PPGG', 'PPGY', 'PPYY']],
+    [8, ['PPPPPPPP', 'PPPPPPGG', 'PPPPGGGG', 'PPPPGGGG', 'PPPPGGGG', 'PPPPGGYY', 'PPPPYYYY', 'PPPPYYYY']],
+  ] as const)('fills an ordered %i×%i Mix left half first, each half row by row from its top-left', (size, rows) => {
     const slices = [
       { value: 59, colour: purple },
       { value: 25, colour: green },
       { value: 16, colour: yellow },
     ]
     const short = (key: string | null) => key![0]!.toUpperCase()
-    expect(buildMix(slices, 4, { mode: 'ordered', seed: 'a' }).cells.map((row) => row.map(short).join(''))).toEqual([
-      'PPPG',
-      'PPGG',
-      'PPGY',
-      'PPYY',
-    ])
+    expect(buildMix(slices, size, { mode: 'ordered', seed: 'a' }).cells.map((row) => row.map(short).join(''))).toEqual(rows)
   })
 
   it('leaves every cell empty when the Plans have no value', () => {

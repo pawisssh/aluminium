@@ -27,29 +27,18 @@ export function buildMix(slices: MixSlice[], size: MixSize, options: { mode: Mix
 }
 
 /**
- * Lays the colours out largest first.
- *
- * 4×4: the grid is two 2-wide halves, each filled row by row from its top-left, the left half
- * before the right. A colour that runs from the left half's lower rows into the right half can
- * end up in two pieces.
- *
- * 8×8: a path that snakes up the first column, down the next, and so on. Any run of cells along
- * it is joined by edges, so each colour is one piece.
+ * Lays the colours out largest first in the grid's left and right halves, each filled row by row
+ * from its top-left, the left half before the right. A colour that runs from the left half's
+ * lower rows into the right half can end up in two pieces.
  */
 function orderedLayout(shares: Share[], size: number): (string | null)[][] {
   const cells: (string | null)[][] = Array.from({ length: size }, () => Array<string | null>(size).fill(null))
   const keys = shares.flatMap((s) => Array<string>(s.cells).fill(s.key))
-  if (size === 4) {
-    for (let i = 0; i < keys.length; i++) {
-      const j = i % 8
-      cells[Math.floor(j / 2)]![Math.floor(i / 8) * 2 + (j % 2)] = keys[i]!
-    }
-    return cells
-  }
+  const width = size / 2
+  const perHalf = width * size
   for (let i = 0; i < keys.length; i++) {
-    const col = Math.floor(i / size)
-    const step = i % size
-    cells[col % 2 === 0 ? size - 1 - step : step]![col] = keys[i]!
+    const j = i % perHalf
+    cells[Math.floor(j / width)]![Math.floor(i / perHalf) * width + (j % width)] = keys[i]!
   }
   return cells
 }
