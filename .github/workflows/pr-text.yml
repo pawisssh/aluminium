@@ -1,0 +1,16 @@
+name: PR text
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+# The PR title and body use GLOSSARY.md's words too; editing them re-runs only this check.
+jobs:
+  glossary:
+    runs-on: [self-hosted, aluminium]
+    steps:
+      - uses: actions/checkout@v4
+      - env:
+          TITLE: ${{ github.event.pull_request.title }}
+          BODY: ${{ github.event.pull_request.body }}
+        run: printf '%s\n\n%s\n' "$TITLE" "$BODY" | node scripts/check-glossary.mjs -

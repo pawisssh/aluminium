@@ -45,12 +45,16 @@ The Mix layout that grows each Plan colour, largest first, from a random cell in
 _Avoid_: Scatter
 
 **Ordered layout**:
-The Mix layout that places Plan colours largest first, the same way every time, in two Sides. Every colour but the largest sits whole in one Side, so the largest is the only one that can span both, and each colour is one edge-joined piece.
+The Mix layout that places Plan colours largest first, the same way every time, in two Sides, each with a Turning fill. Every colour but the largest sits whole in one Side, so the largest is the only one that can span both, and each colour is one edge-joined piece.
 _Avoid_: Snake
 
 **Side**:
 One of the two halves, left and right, that an Ordered layout fills. When colours tie on value, the one listed first counts as the larger.
 _Avoid_: column, half (Half is a Slope)
+
+**Turning fill**:
+How an Ordered layout fills each Side: row by row from the top, each row running the opposite way to the one above, so a colour that reaches a row's end carries on into the row below.
+_Avoid_: Snake, zigzag
 
 **Dominant Plan colour**:
 In an Ordered layout, a Plan colour with more than 50% but less than 75% of the Portfolio's value. It takes exactly the left Side, and the other colours split the right Side by value. From 75% up, a colour takes its true share.

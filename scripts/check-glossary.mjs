@@ -1,6 +1,7 @@
 #!/usr/bin/env node
-// Fails when code under tools/ uses a word GLOSSARY.md lists under _Avoid_.
-// Run from anywhere: node scripts/check-glossary.mjs
+// Fails when code under tools/, or the files given ("-" for stdin), uses a word GLOSSARY.md lists
+// under _Avoid_. The commit-msg hook and the PR text workflow pass their text on stdin.
+// Run from anywhere: node scripts/check-glossary.mjs [file ...]
 import { readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 
@@ -29,14 +30,16 @@ function* files(dir) {
   }
 }
 
+const given = process.argv.slice(2)
+const sources = given.length
+  ? given.map((file) => ({ name: file === '-' ? 'stdin' : file, text: readFileSync(file === '-' ? 0 : file, 'utf8') }))
+  : [...files(path.join(root, 'tools'))].map((file) => ({ name: path.relative(root, file), text: readFileSync(file, 'utf8') }))
+
 const hits = []
-for (const file of files(path.join(root, 'tools'))) {
-  readFileSync(file, 'utf8')
-    .split('\n')
-    .forEach((line, i) => {
-      for (const { term, re } of patterns) if (re.test(line)) hits.push(`${path.relative(root, file)}:${i + 1}: "${term}" (see GLOSSARY.md)`)
-    })
-}
+for (const { name, text } of sources)
+  text.split('\n').forEach((line, i) => {
+    for (const { term, re } of patterns) if (re.test(line)) hits.push(`${name}:${i + 1}: "${term}" (see GLOSSARY.md)`)
+  })
 
 if (hits.length) {
   console.error(`Glossary: ${hits.length} use(s) of avoided terms\n${hits.join('\n')}`)
