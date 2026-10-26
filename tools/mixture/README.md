@@ -10,6 +10,7 @@ npm run typecheck
 npm run check      # typecheck, tests, lint, glossary terms: what CI runs
 npm run probe -- <file>  # a test file with console.log shown (vitest hides it by default)
 npm run brick-stats -- --save before.json  # distinct Brick shapes per family/Slope; --compare before.json, --show mountain/half
+npm run mix-stats -- --save before.json    # Ordered Mix cases over every cell split; --compare before.json, --show "skip ahead"
 npm run vendor:check     # vendored fnm-core matches block at its README hash (CI runs this too)
 ```
 
