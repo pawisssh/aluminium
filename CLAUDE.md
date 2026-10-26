@@ -16,6 +16,6 @@ Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/ag
 
 `tools/<name>/` holds standalone apps, each with its own `package.json` and `README.md`. Run `npm run check` in one before committing; CI (`.github/workflows/check.yml`) runs the same.
 
-Commit messages and PR text are checked against GLOSSARY.md's _Avoid_ words: by `.githooks/commit-msg` once a clone runs `git config core.hooksPath .githooks`, and by `.github/workflows/pr-text.yml`.
+Commit messages and PR text are checked against GLOSSARY.md's _Avoid_ words, and a push to a branch whose PR has merged is stopped: by `.githooks/` once a clone runs `git config core.hooksPath .githooks`, and by `.github/workflows/pr-text.yml`.
 
 Other sessions may be working in `.claude/worktrees/*` at the same time: check `git worktree list` and open PRs before a rename that spans many files.
