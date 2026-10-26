@@ -64,25 +64,29 @@ export default function App() {
                 <ToggleGroupItem value="cases">Mix cases</ToggleGroupItem>
               </ToggleGroup>
             </Setting>
-            <Setting label="Mix grid">
-              <ToggleGroup variant="outline" spacing={0} value={[String(mixSize)]} onValueChange={(v) => v[0] && setState((s) => ({ ...s, mixSize: Number(v[0]) as MixSize }))}>
-                <ToggleGroupItem value="4">4×4</ToggleGroupItem>
-                <ToggleGroupItem value="8">8×8</ToggleGroupItem>
-              </ToggleGroup>
-            </Setting>
-            <Setting label="Mix layout">
-              <ToggleGroup variant="outline" spacing={0} value={[mixLayout]} onValueChange={(v) => v[0] && setState((s) => ({ ...s, mixLayout: v[0] as MixLayout }))}>
-                <ToggleGroupItem value="random">Random</ToggleGroupItem>
-                <ToggleGroupItem value="ordered">Ordered</ToggleGroupItem>
-              </ToggleGroup>
-            </Setting>
-            <Button variant="ghost" onClick={() => setState(initialPlayground())}>
-              <RotateCcw /> Reset
-            </Button>
+            {page === 'playground' && (
+              <>
+                <Setting label="Mix grid">
+                  <ToggleGroup variant="outline" spacing={0} value={[String(mixSize)]} onValueChange={(v) => v[0] && setState((s) => ({ ...s, mixSize: Number(v[0]) as MixSize }))}>
+                    <ToggleGroupItem value="4">4×4</ToggleGroupItem>
+                    <ToggleGroupItem value="8">8×8</ToggleGroupItem>
+                  </ToggleGroup>
+                </Setting>
+                <Setting label="Mix layout">
+                  <ToggleGroup variant="outline" spacing={0} value={[mixLayout]} onValueChange={(v) => v[0] && setState((s) => ({ ...s, mixLayout: v[0] as MixLayout }))}>
+                    <ToggleGroupItem value="random">Random</ToggleGroupItem>
+                    <ToggleGroupItem value="ordered">Ordered</ToggleGroupItem>
+                  </ToggleGroup>
+                </Setting>
+                <Button variant="ghost" onClick={() => setState(initialPlayground())}>
+                  <RotateCcw /> Reset
+                </Button>
+              </>
+            )}
           </div>
         </header>
 
-        {page === 'cases' && <MixCases mixSize={mixSize} mixLayout={mixLayout} />}
+        {page === 'cases' && <MixCases />}
 
         {page === 'playground' && (
           <>

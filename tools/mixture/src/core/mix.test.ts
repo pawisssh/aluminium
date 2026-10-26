@@ -186,14 +186,14 @@ describe('buildMix', () => {
 
   // Values are cell counts out of 16, written as family initials; the first listed wins a tie.
   it.each([
-    ['puts the largest colour at the top of the left Side and the rest on the right first', 'N6 M4 B4 Y2', ['NNMM', 'NNMM', 'NNBB', 'YYBB']],
-    ['turns back at the end of each row', 'B6 N5 M3 Y2', ['BBNN', 'BBNN', 'BBNM', 'YYMM']],
-    ['spans nothing when the two largest colours tie', 'B5 N5 Y3 M3', ['BBNN', 'BBNN', 'BMNY', 'MMYY']],
-    ['spills the largest colour onto the top of the right Side', 'B7 N3 M3 Y3', ['BBBB', 'BBNN', 'BYNM', 'YYMM']],
+    ['puts the largest colour at the top of the left Side and the rest on the right first', 'N6 O4 B4 Y2', ['NNOO', 'NNOO', 'NNBB', 'YYBB']],
+    ['turns back at the end of each row', 'B6 N5 O3 Y2', ['BBNN', 'BBNN', 'BBNO', 'YYOO']],
+    ['spans nothing when the two largest colours tie', 'B5 N5 Y3 O3', ['BBNN', 'BBNN', 'BONY', 'OOYY']],
+    ['spills the largest colour onto the top of the right Side', 'B7 N3 O3 Y3', ['BBBB', 'BBNN', 'BYNO', 'YYOO']],
     ['spills a single cell of the largest colour when nothing else fits', 'B7 N7 Y2', ['BBBN', 'BBNN', 'BBNN', 'YYNN']],
     ['puts a smaller colour on the right when a larger one no longer fits there', 'B6 N5 G4 Y1', ['BBBB', 'BBNN', 'GGNN', 'GGYN']],
   ] as const)('%s in an ordered Mix (%s)', (_, spec, rows) => {
-    const families = { B: 'blue', N: 'navy', M: 'magenta', Y: 'yellow', G: 'green' } as const
+    const families = { B: 'blue', N: 'navy', O: 'orange', Y: 'yellow', G: 'green' } as const
     const slices = spec.split(' ').map((s) => ({ value: Number(s.slice(1)), colour: { family: families[s[0] as keyof typeof families], tint: 100 as const } }))
     expect(short(buildMix(slices, 4, { layout: 'ordered', seed: 'a' }).cells)).toEqual(rows)
   })

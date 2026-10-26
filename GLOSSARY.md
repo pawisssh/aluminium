@@ -44,6 +44,10 @@ _Avoid_: Snake
 One of the two halves, left and right, that an Ordered layout fills. When colours tie on value, the one listed first counts as the larger.
 _Avoid_: column, half (Half is a Slope)
 
+**Mix case**:
+One way a 4×4 Mix can be cut up when every Plan colour is a single 1×1, 2×1, 2×2, 2×3 or 2×4 piece (a Side's width by its rows), placed largest first in the left Side while it fits, then the right. Only the largest colour can be bigger, from 75% up: it takes the whole left Side and a 2×2 to 2×4 piece at the top of the right.
+_Avoid_: scenario, permutation
+
 **Dominant Plan colour**:
 In an Ordered layout, a Plan colour with more than 50% but less than 75% of the Portfolio's value. It takes exactly the left Side, and the other colours split the right Side by value. From 75% up, a colour takes its true share.
 _Avoid_: Majority, main colour
@@ -53,9 +57,9 @@ The colour family and Tint a Plan is drawn in. Different Plans may share a Plan 
 _Avoid_: Theme colour
 
 **Colour family**:
-One of the twelve neon hues a Plan colour comes from, such as Purple or Navy.
+One of the nine neon hues a Plan colour comes from, such as Purple or Navy.
 _Avoid_: family (on its own), hue
 
 **Tint**:
-One of the solid steps of a colour family: 100, 75, 50 or 25. Plans mostly use 100.
+One of the solid steps of a colour family: 100, 75, 50 or 25, and 150 for Green and Red. Plans mostly use 100, or 150 for Green and Red.
 _Avoid_: Shade, opacity

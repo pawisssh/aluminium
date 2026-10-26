@@ -1,0 +1,78 @@
+import { describe, expect, it } from 'vitest'
+import { layoutCase, mixCases, partitions } from './mixCases'
+
+/** Each colour's bounding box as [width, rows], with whether it fills the box and stays in one Side. */
+function pieces(cells: number[][]) {
+  const boxes = new Map<number, { top: number; bottom: number; left: number; right: number; count: number }>()
+  cells.forEach((row, r) =>
+    row.forEach((colour, c) => {
+      const b = boxes.get(colour) ?? { top: r, bottom: r, left: c, right: c, count: 0 }
+      boxes.set(colour, { top: Math.min(b.top, r), bottom: Math.max(b.bottom, r), left: Math.min(b.left, c), right: Math.max(b.right, c), count: b.count + 1 })
+    }),
+  )
+  return [...boxes].map(([colour, b]) => {
+    const width = b.right - b.left + 1
+    const rows = b.bottom - b.top + 1
+    return { colour, shape: `${width}×${rows}`, solid: width * rows === b.count, oneSide: b.left >= 2 || b.right < 2 }
+  })
+}
+
+/** Whether some of `sizes` add up to exactly one Side. */
+function splitsIntoSides(sizes: number[]): boolean {
+  let sums = new Set([0])
+  for (const size of sizes) sums = new Set([...sums, ...[...sums].map((s) => s + size)])
+  return sums.has(8)
+}
+
+describe('mixCases', () => {
+  const cases = mixCases(11)
+
+  it('counts 52 cases with up to 11 Plan colours', () => {
+    const byColours: Record<number, number> = {}
+    for (const c of cases) byColours[c.sizes.length] = (byColours[c.sizes.length] ?? 0) + 1
+    expect(cases).toHaveLength(52)
+    expect(byColours).toEqual({ 1: 1, 2: 3, 3: 4, 4: 6, 5: 7, 6: 7, 7: 6, 8: 6, 9: 5, 10: 4, 11: 3 })
+    expect(cases.filter((c) => c.sizes.length === 2).map((c) => c.sizes)).toEqual([[14, 2], [12, 4], [8, 8]])
+  })
+
+  it('cuts every case into the allowed pieces, each whole in one Side but a spanning largest', () => {
+    for (const c of cases) {
+      const spans = c.sizes[0]! > 8
+      // A spanning largest is the whole left Side plus whole rows at the top of the right.
+      if (spans) expect(c.cells.map((row) => row.map((colour) => colour === 0))).toEqual(c.cells.map((_, r) => [true, true, r < (c.sizes[0]! - 8) / 2, r < (c.sizes[0]! - 8) / 2]))
+      for (const p of pieces(c.cells.map((row) => row.map((colour) => (spans && colour === 0 ? -2 : colour)))).filter((p) => p.colour !== -2)) {
+        expect(['1×1', '2×1', '2×2', '2×3', '2×4']).toContain(p.shape)
+        expect(p.solid && p.oneSide).toBe(true)
+      }
+      expect(c.cells.flat()).not.toContain(-1)
+    }
+  })
+
+  it('fills the left Side first, largest at the top', () => {
+    expect(layoutCase([6, 4, 4, 2])).toEqual([
+      [0, 0, 1, 1],
+      [0, 0, 1, 1],
+      [0, 0, 2, 2],
+      [3, 3, 2, 2],
+    ])
+    expect(layoutCase([4, 4, 2, 2, 2, 1, 1])).toEqual([
+      [0, 0, 2, 2],
+      [0, 0, 3, 3],
+      [1, 1, 4, 4],
+      [1, 1, 5, 6],
+    ])
+  })
+
+  it('lets the largest take the left Side and the top of the right', () => {
+    expect(layoutCase([12, 2, 1, 1])).toEqual([
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 1, 1],
+      [0, 0, 2, 3],
+    ])
+  })
+
+  it('places every set of pieces that can be split into the two Sides', () => {
+    for (const sizes of partitions(16, 8)) expect(layoutCase(sizes) !== null).toBe(splitsIntoSides(sizes))
+  })
+})

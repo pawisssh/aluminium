@@ -1,6 +1,6 @@
 import { Dices, Trash2 } from 'lucide-react'
 import { BRICK_DEFAULTS, type BrickSettings } from '@/core/brick'
-import { COLOUR_FAMILIES, TINTS, type ColourFamily, type Tint } from '@/core/colours'
+import { COLOUR_FAMILIES, familyTints, type ColourFamily, type Tint } from '@/core/colours'
 import { generateRandomSeed, type Plan } from '@/playground'
 import type { PatternFamily, Slope } from '@/vendor/fnm-core/types'
 import { Button } from '@/components/ui/button'
@@ -82,7 +82,12 @@ export function PlanEditor({
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Field label="Colour">
-          <Select items={FAMILY_ITEMS} value={plan.colour.family} onValueChange={(f) => onChange({ ...plan, colour: { ...plan.colour, family: f as ColourFamily } })}>
+          <Select items={FAMILY_ITEMS} value={plan.colour.family} onValueChange={(f) => {
+              const family = f as ColourFamily
+              // A family without the current Tint falls back to 100.
+              const tint = familyTints(family).includes(plan.colour.tint) ? plan.colour.tint : 100
+              onChange({ ...plan, colour: { family, tint } })
+            }}>
             <SelectTrigger className="w-full">
               <SelectValue />
             </SelectTrigger>
@@ -104,7 +109,7 @@ export function PlanEditor({
             value={[String(plan.colour.tint)]}
             onValueChange={(v) => v[0] && onChange({ ...plan, colour: { ...plan.colour, tint: Number(v[0]) as Tint } })}
           >
-            {TINTS.map((t) => (
+            {familyTints(plan.colour.family).map((t) => (
               <ToggleGroupItem key={t} value={String(t)} aria-label={`Tint ${t}`}>
                 <span className="size-3 rounded-sm" style={{ background: COLOUR_FAMILIES[plan.colour.family].tints[t] }} />
               </ToggleGroupItem>

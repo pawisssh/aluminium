@@ -1,99 +1,93 @@
-import { useMemo, useState } from 'react'
-import { COLOUR_FAMILIES, type ColourFamily } from '@/core/colours'
-import { buildMix, type MixLayout, type MixSize } from '@/core/mix'
-import { Label } from '@/components/ui/label'
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { useMemo } from 'react'
+import { COLOUR_FAMILIES, colourHex, colourKey, type ColourFamily, type PlanColour } from '@/core/colours'
+import { mixCases, PIECE_SIZES } from '@/core/mixCases'
 import { MixIcon } from '@/components/icons'
 
-const FAMILIES = Object.keys(COLOUR_FAMILIES) as ColourFamily[]
-const COUNTS = FAMILIES.map((_, i) => i + 1)
+/** The Plan colours Plans mostly use: every family at Tint 100, then Green and Red at 150. */
+const CASE_COLOURS: PlanColour[] = [
+  ...(Object.keys(COLOUR_FAMILIES) as ColourFamily[]).map((family) => ({ family, tint: 100 as const })),
+  { family: 'green', tint: 150 },
+  { family: 'red', tint: 150 },
+]
 
-/** Every way to pick `k` of `items`, in the order they're listed. */
-function combinations<T>(items: T[], k: number): T[][] {
-  if (k === 0) return [[]]
-  return items.flatMap((item, i) => combinations(items.slice(i + 1), k - 1).map((rest) => [item, ...rest]))
-}
+const SHAPES: Record<number, string> = { 16: '4×4', 14: '2×4 + 2×3', 12: '2×4 + 2×2', 8: '2×4', 6: '2×3', 4: '2×2', 2: '2×1', 1: '1×1' }
+const percent = (cells: number) => `${(cells / 16) * 100}%`
 
-const binomial = (n: number, k: number): number => (k === 0 ? 1 : (binomial(n, k - 1) * (n - k + 1)) / k)
-
-/**
- * Every set of colour families a Mix can hold at Tint 100, one Mix per set. Each Plan colour gets
- * an equal value, so where the cells don't split evenly the families listed first get the extra.
- */
-export function MixCases({ mixSize, mixLayout }: { mixSize: MixSize; mixLayout: MixLayout }) {
-  const [count, setCount] = useState(2)
-  const cases = useMemo(
-    () =>
-      combinations(FAMILIES, count).map((families) => ({
-        families,
-        mix: buildMix(
-          families.map((family) => ({ value: 1, colour: { family, tint: 100 } })),
-          mixSize,
-          { layout: mixLayout, seed: families.join('+') },
-        ),
-      })),
-    [count, mixSize, mixLayout],
-  )
-  const total = COUNTS.reduce((a, k) => a + binomial(FAMILIES.length, k), 0)
+/** Every 4×4 Mix case, grouped by how many Plan colours it holds; the nth colour of a case is drawn in the nth case colour. */
+export function MixCases() {
+  const groups = useMemo(() => {
+    const byColours = new Map<number, ReturnType<typeof mixCases>>()
+    for (const c of mixCases(CASE_COLOURS.length)) byColours.set(c.sizes.length, [...(byColours.get(c.sizes.length) ?? []), c])
+    return [...byColours]
+  }, [])
+  const total = groups.reduce((a, [, cases]) => a + cases.length, 0)
+  let n = 0
 
   return (
     <div className="flex flex-col gap-6">
       <section className="flex flex-col gap-3 rounded-xl border bg-card p-4">
-        <div className="flex flex-col gap-1.5">
-          <Label className="text-xs text-muted-foreground">Plan colours in the Mix (Tint 100)</Label>
-          <ToggleGroup variant="outline" spacing={0} value={[String(count)]} onValueChange={(v) => v[0] && setCount(Number(v[0]))}>
-            {COUNTS.map((k) => (
-              <ToggleGroupItem key={k} value={String(k)}>
-                {k}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
-        </div>
         <p className="text-sm">
-          <span className="text-2xl font-bold tabular-nums">{cases.length}</span> cases with {count} of {FAMILIES.length} colour families
-          <span className="text-muted-foreground"> · {total} across 1–{FAMILIES.length}</span>
+          <span className="text-2xl font-bold tabular-nums">{total}</span> Mix cases on a 4×4 grid with up to {CASE_COLOURS.length} Plan colours
         </p>
         <table className="w-fit text-xs tabular-nums">
           <tbody>
             <tr>
               <th className="pr-3 text-left font-normal text-muted-foreground">Colours</th>
-              {COUNTS.map((k) => (
-                <td key={k} className={`px-2 text-right ${k === count ? 'font-bold' : ''}`}>
+              {groups.map(([k]) => (
+                <td key={k} className="px-2 text-right">
                   {k}
                 </td>
               ))}
             </tr>
             <tr>
               <th className="pr-3 text-left font-normal text-muted-foreground">Cases</th>
-              {COUNTS.map((k) => (
-                <td key={k} className={`px-2 text-right ${k === count ? 'font-bold' : ''}`}>
-                  {binomial(FAMILIES.length, k)}
+              {groups.map(([k, cases]) => (
+                <td key={k} className="px-2 text-right">
+                  {cases.length}
                 </td>
               ))}
             </tr>
           </tbody>
         </table>
         <p className="text-xs text-muted-foreground">
-          Each Plan colour has an equal value, so which one is largest isn't varied: where the cells don't split evenly, the colour listed first gets the extra.
+          Each Plan colour is one piece: {PIECE_SIZES.map((s) => `${SHAPES[s]} (${percent(s)})`).join(', ')}, a Side's width by its rows. Largest first, each goes in the left
+          Side while it fits, then the right, top to bottom. Only the largest can be bigger, from 75% up: it takes the whole left Side and a 2×2 or larger
+          piece at the top of the right. Between 50% and 75% it takes exactly the left Side.
         </p>
+        <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs">
+          {CASE_COLOURS.map((colour, i) => (
+            <span key={colourKey(colour)} className="flex items-center gap-1">
+              <span className="size-3 rounded-sm" style={{ background: colourHex(colour) }} />
+              {i + 1}. {COLOUR_FAMILIES[colour.family].label} {colour.tint}
+            </span>
+          ))}
+        </div>
       </section>
 
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(5.5rem,1fr))] gap-3">
-        {cases.map(({ families, mix }, i) => {
-          const names = families.map((f) => COLOUR_FAMILIES[f].label).join(', ')
-          return (
-            <figure key={families.join('+')} className="flex flex-col items-center gap-1" title={names}>
-              <div className="rounded-md bg-muted p-1.5">
-                <MixIcon cells={mix.cells} size={64} />
-              </div>
-              <figcaption className="text-center text-[10px] leading-tight text-muted-foreground">
-                <span className="tabular-nums">#{i + 1}</span>
-                {count <= 3 && <span className="block">{names}</span>}
-              </figcaption>
-            </figure>
-          )
-        })}
-      </div>
+      {groups.map(([k, cases]) => (
+        <section key={k} className="flex flex-col gap-2">
+          <h2 className="text-sm font-medium">
+            {k} Plan colour{k > 1 ? 's' : ''} <span className="font-normal text-muted-foreground">· {cases.length}</span>
+          </h2>
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(6rem,1fr))] gap-3">
+            {cases.map((c) => {
+              n++
+              const shares = c.sizes.map(percent).join(' / ')
+              return (
+                <figure key={c.sizes.join('-')} className="flex flex-col items-center gap-1" title={c.sizes.map((s) => SHAPES[s]).join(', ')}>
+                  <div className="rounded-md bg-muted p-1.5">
+                    <MixIcon cells={c.cells.map((row) => row.map((i) => colourKey(CASE_COLOURS[i]!)))} size={64} />
+                  </div>
+                  <figcaption className="text-center text-[10px] leading-tight text-muted-foreground">
+                    <span className="tabular-nums">#{n}</span>
+                    <span className="block tabular-nums">{shares}</span>
+                  </figcaption>
+                </figure>
+              )
+            })}
+          </div>
+        </section>
+      ))}
     </div>
   )
 }
