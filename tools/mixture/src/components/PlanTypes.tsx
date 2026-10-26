@@ -1,7 +1,9 @@
-import { Dices, Plus, Trash2 } from 'lucide-react'
-import { BRICK_GRIDS, brickDefaults, type BrickGrid, type BrickSettings } from '@/core/brick'
+import { useMemo, useState } from 'react'
+import { Check, Copy, Dices, Plus, Search, Trash2 } from 'lucide-react'
+import { BRICK_GRIDS, brickDefaults, generateBrick, type BrickGrid, type BrickSettings } from '@/core/brick'
 import { COLOUR_FAMILIES, colourHex, familyTints, type ColourFamily, type Tint } from '@/core/colours'
-import type { PlanType } from '@/core/planTypes'
+import { closestBricks, coverMatch, planCover, type CoverCandidate } from '@/core/planCovers'
+import { planTypesJson, type PlanType } from '@/core/planTypes'
 import { generateRandomSeed, id } from '@/playground'
 import { blockCountRangeFor } from '@/vendor/fnm-core/generator'
 import type { PatternFamily, Slope } from '@/vendor/fnm-core/types'
@@ -11,7 +13,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { BrickIcon } from './icons'
+import { BrickIcon, CellGrid } from './icons'
 
 const FAMILY_ITEMS = (Object.keys(COLOUR_FAMILIES) as ColourFamily[]).map((f) => ({ value: f, label: COLOUR_FAMILIES[f].label }))
 const PATTERN_FAMILIES: { value: PatternFamily; label: string }[] = [
@@ -27,6 +29,9 @@ const SLOPES: { value: Slope; label: string }[] = [
 ]
 
 const gridKey = (g: BrickGrid) => `${g.cols}x${g.rows}`
+const percent = (match: number) => `${Math.round(match * 100)}%`
+/** Seeds tried per Brick family and Slope each time Closest Bricks looks further. */
+const SEEDS_PER_LOOK = 200
 
 /** The Bricks tab: every Plan type a Plan can be, and the Brick grid every Brick is drawn on. */
 export function PlanTypes({
@@ -46,6 +51,7 @@ export function PlanTypes({
   const setType = (type: PlanType) => onChange(planTypes.map((t) => (t.id === type.id ? type : t)))
   const inDraws = planTypes.filter((t) => t.inDraws).length
   const families = Object.keys(COLOUR_FAMILIES) as ColourFamily[]
+  const [copied, setCopied] = useState(false)
 
   return (
     <div className="flex flex-col gap-4">
@@ -71,6 +77,18 @@ export function PlanTypes({
           <span className="text-sm text-muted-foreground">
             {inDraws} of {planTypes.length} in draws
           </span>
+          <Button
+            variant="outline"
+            title="Copy every Plan type as planTypes.json, to save them as the defaults"
+            onClick={() =>
+              void navigator.clipboard.writeText(planTypesJson(planTypes)).then(() => {
+                setCopied(true)
+                setTimeout(() => setCopied(false), 1500)
+              })
+            }
+          >
+            {copied ? <Check /> : <Copy />} {copied ? 'Copied' : 'Copy planTypes.json'}
+          </Button>
           <Button variant="secondary" onClick={() => onChange(planTypes.map((t) => ({ ...t, brick: { ...t.brick, seed: generateRandomSeed() } })))}>
             <Dices /> Shuffle all Bricks
           </Button>
@@ -126,6 +144,23 @@ function PlanTypeCard({
   const setBrick = (brick: Partial<BrickSettings>) => onChange({ ...type, brick: { ...type.brick, ...brick } })
   const defaults = brickDefaults(brickGrid)
   const blockCounts = blockCountRangeFor({ ...brickGrid, cellW: 1, cellH: 1 })
+  const cover = useMemo(() => planCover(type.id), [type.id])
+  const match = useMemo(() => (cover ? coverMatch(generateBrick(type.brick, brickGrid), cover) : null), [cover, type.brick, brickGrid])
+  // Closest Bricks found so far, for the Brick grid they were found on, and how far the seeds went.
+  const [closest, setClosest] = useState<{ grid: string; to: number; found: CoverCandidate[] } | null>(null)
+  const [looking, setLooking] = useState(false)
+  const shown = closest?.grid === gridKey(brickGrid) ? closest : null
+  const lookFurther = () => {
+    if (!cover) return
+    const from = shown?.to ?? 0
+    setLooking(true)
+    // Let the button show it's looking before the search holds up the page.
+    setTimeout(() => {
+      const found = closestBricks(cover, brickGrid, type.id, { from, tries: SEEDS_PER_LOOK })
+      setClosest({ grid: gridKey(brickGrid), to: from + SEEDS_PER_LOOK, found: from === 0 ? found : [...(shown?.found ?? []), ...found].sort((a, b) => b.match - a.match).slice(0, 8) })
+      setLooking(false)
+    }, 0)
+  }
 
   return (
     <div className={`flex flex-col gap-3 rounded-xl border p-3 ${type.inDraws ? 'bg-card' : 'border-dashed bg-muted/40'}`}>
@@ -138,6 +173,14 @@ function PlanTypeCard({
             <Dices /> Brick
           </Button>
         </div>
+        {cover && (
+          <div className="flex flex-col items-center gap-1.5" title="This plan's artwork on the plan picker (Figma), as 16×16 cells">
+            <div className="flex size-20 items-center justify-center rounded-lg bg-muted">
+              <CellGrid cells={cover.map((row) => row.map((on) => (on ? colourHex(type.colour) : null)))} size={64} />
+            </div>
+            <span className="text-xs text-muted-foreground">{match === null ? 'Plan Cover' : `Match ${percent(match)}`}</span>
+          </div>
+        )}
         <div className="flex min-w-0 flex-1 flex-col gap-2">
           <Input aria-label="Plan type name" value={type.name} onChange={(e) => onChange({ ...type, name: e.target.value })} />
           <Select items={FAMILY_ITEMS} value={type.colour.family} onValueChange={(f) => f && onChange({ ...type, colour: { family: f as ColourFamily, tint: familyTints(f as ColourFamily).includes(type.colour.tint) ? type.colour.tint : 100 } })}>
@@ -196,6 +239,36 @@ function PlanTypeCard({
         </Field>
       </div>
 
+      {cover && (
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" disabled={looking || match === null} title={match === null ? 'Plan Covers are square; pick a square Brick grid' : undefined} onClick={lookFurther}>
+              <Search /> {looking ? 'Looking…' : shown ? 'Look further' : 'Closest Bricks'}
+            </Button>
+            {shown && <span className="text-xs text-muted-foreground">best of {shown.to} seeds per Brick family and Slope</span>}
+          </div>
+          {shown && (
+            <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-8">
+              {shown.found.map((c) => {
+                const current = sameBrick(c.brick, type.brick)
+                return (
+                  <button
+                    key={`${c.brick.family}-${c.brick.slope}-${c.brick.seed}`}
+                    type="button"
+                    title={`${c.brick.family} · ${c.brick.slope} · ${c.brick.seed}`}
+                    className={`flex flex-col items-center gap-1 rounded-md border p-1 hover:bg-muted ${current ? 'border-primary ring-1 ring-primary' : ''}`}
+                    onClick={() => onChange({ ...type, brick: c.brick })}
+                  >
+                    <BrickIcon brick={c.brick} colour={type.colour} size={32} />
+                    <span className="text-[10px] text-muted-foreground tabular-nums">{percent(c.match)}</span>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
       <details className="text-sm">
         <summary className="cursor-pointer text-muted-foreground">Advanced · seed {type.brick.seed}</summary>
         <div className="mt-3 grid grid-cols-2 gap-2">
@@ -225,6 +298,9 @@ function PlanTypeCard({
     </div>
   )
 }
+
+const sameBrick = (a: BrickSettings, b: BrickSettings) =>
+  a.family === b.family && a.slope === b.slope && a.seed === b.seed && a.blockCount === b.blockCount && a.guidance === b.guidance && a.cornerMeetLimit === b.cornerMeetLimit
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (

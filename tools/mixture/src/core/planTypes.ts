@@ -1,8 +1,9 @@
 import { colourKey, type ColourFamily, type PlanColour, type Tint } from './colours'
 import type { BrickSettings } from './brick'
-import type { Slope } from '@/vendor/fnm-core/types'
+import type { PatternFamily, Slope } from '@/vendor/fnm-core/types'
 // The plans on the plan picker (plan-select/plans), in its order, then the four that sit outside it.
-// Kept as data: some official names use words the glossary keeps out of code.
+// Kept as data: some official names use words the glossary keeps out of code. Each one's Brick
+// settings come from the closest match to its artwork on the plan picker, where it has one.
 import PLAN_TYPES from './planTypes.json'
 
 export interface PlanType {
@@ -14,16 +15,28 @@ export interface PlanType {
   inDraws: boolean
 }
 
-const SLOPES: Slope[] = ['half', '75', 'flat']
-
 export function defaultPlanTypes(): PlanType[] {
-  return PLAN_TYPES.map((t, i) => ({
+  return PLAN_TYPES.map((t) => ({
     id: t.id,
     name: t.name,
     colour: { family: t.family as ColourFamily, tint: t.tint as Tint },
-    brick: { family: 'auto', slope: SLOPES[i % SLOPES.length]!, seed: t.id },
-    inDraws: true,
+    brick: { ...t.brick, family: t.brick.family as PatternFamily, slope: t.brick.slope as Slope },
+    inDraws: t.inDraws,
   }))
+}
+
+/** Plan types written out as `planTypes.json` is: one line each, so a saved set diffs cleanly. */
+export function planTypesJson(types: PlanType[]): string {
+  const fields = (entries: [string, unknown][]) =>
+    entries
+      .filter(([, v]) => v !== undefined)
+      .map(([k, v]) => `${JSON.stringify(k)}: ${JSON.stringify(v)}`)
+      .join(', ')
+  const lines = types.map(({ id, name, colour, brick: b, inDraws }) => {
+    const brick = fields([['family', b.family], ['slope', b.slope], ['seed', b.seed], ['guidance', b.guidance], ['blockCount', b.blockCount], ['cornerMeetLimit', b.cornerMeetLimit]])
+    return `  { ${fields([['id', id], ['name', name], ['family', colour.family], ['tint', colour.tint]])}, "brick": { ${brick} }, "inDraws": ${inDraws} }`
+  })
+  return `[\n${lines.join(',\n')}\n]\n`
 }
 
 /**

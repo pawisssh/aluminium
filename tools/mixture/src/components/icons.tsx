@@ -4,7 +4,7 @@ import { colourFromKey, colourHex, type PlanColour } from '@/core/colours'
 import { BrickGridContext } from './brickGrid'
 
 /** Draws rows of cells as square tiles, `size` along the longer side; a null cell is left empty. */
-function CellGrid({ cells, size, className }: { cells: (string | null)[][]; size: number; className?: string }) {
+export function CellGrid({ cells, size, className }: { cells: (string | null)[][]; size: number; className?: string }) {
   const rows = cells.length
   const cols = cells[0]?.length ?? 0
   const cell = size / Math.max(rows, cols, 1)
