@@ -29,12 +29,24 @@ A Portfolio's icon: a square grid (4×4 or 8×8) filled with Plan colours, where
 _Avoid_: Heatmap, treemap, allocation chart
 
 **Mix layout**:
-How a Mix places its Plan colours: Random (each colour one edge-joined piece, placed by the Mix's seed) or Ordered (largest colour first, laid out the same way every time, in two Sides).
+How a Mix places its Plan colours: a Random layout or an Ordered layout.
 _Avoid_: mode
 
+**Random layout**:
+The Mix layout that grows each Plan colour, largest first, from a random cell into neighbouring cells, so each colour is one edge-joined piece. The Mix's seed picks the cells.
+_Avoid_: Scatter
+
+**Ordered layout**:
+The Mix layout that places Plan colours largest first, the same way every time, in two Sides. Every colour but the largest sits whole in one Side, so the largest is the only one that can span both, and each colour is one edge-joined piece.
+_Avoid_: Snake
+
 **Side**:
-One of the two halves, left and right, that an Ordered Mix is laid out in. Only the largest Plan colour may span both Sides; every other colour sits whole in one Side. When colours tie on value, the one listed first counts as the larger.
+One of the two halves, left and right, that an Ordered layout fills. When colours tie on value, the one listed first counts as the larger.
 _Avoid_: column, half (Half is a Slope)
+
+**Dominant Plan colour**:
+In an Ordered layout, a Plan colour with more than 50% but less than 75% of the Portfolio's value. It takes exactly the left Side, and the other colours split the right Side by value. From 75% up, a colour takes its true share.
+_Avoid_: Majority, main colour
 
 **Plan colour**:
 The colour family and Tint a Plan is drawn in. Different Plans may share a Plan colour when they are the same kind of plan.

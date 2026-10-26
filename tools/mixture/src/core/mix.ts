@@ -141,8 +141,8 @@ interface Share {
 
 /**
  * Splits `total` cells between Plan colours by value, largest colour first. In an ordered Mix a
- * colour with more than half the value but less than three quarters takes exactly the left Side,
- * and the other colours split the right Side.
+ * Dominant Plan colour (more than half the value, less than three quarters) takes exactly the left
+ * Side, and the other colours split the right Side.
  */
 function allocate(slices: MixSlice[], total: number, layout: MixLayout): { shares: Share[]; hidden: number } {
   const byKey = new Map<string, number>()

@@ -5,19 +5,44 @@ on:
     branches: [main]
   pull_request:
 
+# Every job runs on the self-hosted runner on Kane's Mac (~/actions-runner-aluminium), which has
+# jq and node on its PATH and block checked out at ~/Projects/finnomena/block.
 jobs:
-  mixture:
-    # The self-hosted runner on Kane's Mac (~/actions-runner-aluminium).
+  list-tools:
+    runs-on: [self-hosted, aluminium]
+    outputs:
+      tools: ${{ steps.list.outputs.tools }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: list
+        run: echo "tools=$(ls -d tools/*/package.json | cut -d/ -f2 | jq -Rcs 'split("\n")[:-1]')" >> "$GITHUB_OUTPUT"
+
+  tool:
+    needs: list-tools
+    strategy:
+      fail-fast: false
+      matrix:
+        tool: ${{ fromJSON(needs.list-tools.outputs.tools) }}
+    name: tools/${{ matrix.tool }}
     runs-on: [self-hosted, aluminium]
     defaults:
       run:
-        working-directory: tools/mixture
+        working-directory: tools/${{ matrix.tool }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: lts/*
-          cache: npm
-          cache-dependency-path: tools/mixture/package-lock.json
-      - run: npm ci
+      # ~/.npm stays on the runner between jobs, so no Actions cache is needed.
+      - run: npm ci --prefer-offline --no-audit --no-fund
       - run: npm run check
+      - run: BLOCK_REPO="$HOME/Projects/finnomena/block" npm run vendor:check --if-present
+
+  # Files outside tools/: a malformed .claude/settings.json makes Claude Code drop its hooks silently.
+  repo-config:
+    runs-on: [self-hosted, aluminium]
+    steps:
+      - uses: actions/checkout@v4
+      - run: jq -e . .claude/*.json > /dev/null
+      - run: for f in scripts/*.sh; do sh -n "$f"; done
+      - run: for f in scripts/*.mjs tools/*/scripts/*.mjs; do node --check "$f"; done

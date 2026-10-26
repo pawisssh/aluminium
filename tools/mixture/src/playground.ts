@@ -94,7 +94,7 @@ export const MIX_EXAMPLES: MixExample[] = [
   { name: 'Spill', size: 4, shares: [['blue', 43.75], ['navy', 18.75], ['magenta', 18.75], ['yellow', 18.75]] },
   { name: 'One-cell spill', size: 4, shares: [['blue', 43.75], ['navy', 43.75], ['yellow', 12.5]] },
   { name: 'Skip ahead', size: 4, shares: [['blue', 37.5], ['navy', 31.25], ['green', 25], ['yellow', 6.25]] },
-  { name: 'Half and rest', size: 4, shares: [['blue', 50], ['navy', 31.25], ['magenta', 12.5], ['yellow', 6.25]] },
+  { name: 'Exactly 50%', size: 4, shares: [['blue', 50], ['navy', 31.25], ['magenta', 12.5], ['yellow', 6.25]] },
   { name: 'Past 75%', size: 4, shares: [['blue', 81.25], ['navy', 12.5], ['magenta', 6.25]] },
   { name: 'Five colours', size: 8, shares: [['blue', 46.875], ['navy', 21.875], ['magenta', 15.625], ['yellow', 9.375], ['violet', 6.25]] },
   { name: 'Tie, five colours', size: 8, shares: [['blue', 31.25], ['navy', 31.25], ['magenta', 18.75], ['yellow', 12.5], ['violet', 6.25]] },

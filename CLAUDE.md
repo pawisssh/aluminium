@@ -15,3 +15,5 @@ Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/ag
 ## Tools
 
 `tools/<name>/` holds standalone apps, each with its own `package.json` and `README.md`. Run `npm run check` in one before committing; CI (`.github/workflows/check.yml`) runs the same.
+
+Other sessions may be working in `.claude/worktrees/*` at the same time: check `git worktree list` and open PRs before a rename that spans many files.
