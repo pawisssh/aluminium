@@ -190,6 +190,7 @@ export {
 export {
   REFERENCE_PATTERNS,
   LATEST_REFERENCE_SET,
+  AREA_RESAMPLE_SET,
   referencePatternsFor,
   REFERENCE_SIZE,
   patternSimilarity,
@@ -205,5 +206,6 @@ export {
   type SimilarityFilter,
   type SimilarityResult,
 } from './referencePatterns.js';
+export { templateMask } from './templateMode.js';
 
 export * from './text/index.js';
