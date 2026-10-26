@@ -9,6 +9,12 @@ describe('defaultPlanTypes', () => {
     expect(new Set(types.map((t) => t.id)).size).toBe(types.length)
     expect(new Set(types.map((t) => t.brick.seed)).size).toBe(types.length)
   })
+
+  it('takes each Plan type’s Brick settings and In draws from the data', () => {
+    const money = defaultPlanTypes().find((t) => t.id === 'money-plus')!
+    expect(money.brick).toEqual({ family: 'hanging', slope: 'half', seed: 'money-plus-557', guidance: 0, blockCount: 4 })
+    expect(money.inDraws).toBe(true)
+  })
 })
 
 describe('drawPlanTypes', () => {
