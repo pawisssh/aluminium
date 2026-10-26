@@ -10,7 +10,7 @@ export interface PlanType {
   name: string
   colour: PlanColour
   brick: BrickSettings
-  /** Whether random draws (a new Plan, a redrawn Plan, a loaded example) may pick it. */
+  /** Whether random draws (a new Plan, a redrawn Plan, a picked Mix case) may pick it. */
   inDraws: boolean
 }
 
