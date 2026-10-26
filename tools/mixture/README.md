@@ -13,7 +13,7 @@ npm run brick-stats -- --save before.json  # distinct Brick shapes per family/Sl
 npm run vendor:check     # vendored fnm-core matches block at its README hash (CI runs this too)
 ```
 
-- `src/core/mix.ts`: `buildMix` turns Plan values into a Mix (largest-remainder cell counts, Random layout keeps each Plan colour in one edge-joined piece; Ordered fills the left and right halves row by row, left half first, and gives a Dominant Plan colour exactly the left half).
+- `src/core/mix.ts`: `buildMix` turns Plan values into a Mix (largest-remainder cell counts, Random layout keeps each Plan colour in one edge-joined piece; Ordered lays colours out in two Sides: every colour but the largest sits whole in one Side, the right one first while it fits, the largest takes what is left at the top of both, and each Side fills row by row, turning back at each row's end; a Dominant Plan colour gets exactly the left Side).
 - `src/components/MixCases.tsx`: the Mix cases page (`#cases`) draws one Mix per set of colour families at Tint 100, picked by how many Plan colours it holds, with the case count for each.
 - `src/core/brick.ts`: `generateBrick` draws a 4×4 Brick with the Pattern Builder's generator, vendored in `src/vendor/fnm-core` (see its README).
 - Plan colours come from neon `theme/tokens/colors.json`; the light theme from `theme.json`.
