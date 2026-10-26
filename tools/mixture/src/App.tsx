@@ -2,13 +2,14 @@ import { useMemo } from 'react'
 import { Dices, Plus, RotateCcw, TriangleAlert } from 'lucide-react'
 import { colourFromKey, colourHex, colourKey, COLOUR_FAMILIES } from '@/core/colours'
 import { buildMix, type Mix, type MixLayout, type MixSize } from '@/core/mix'
-import { baht, generateRandomSeed, initialPlayground, newPlan, newPortfolio, portfolioValue, usePlayground, type Plan, type Portfolio } from '@/playground'
+import { baht, examplePlans, generateRandomSeed, initialPlayground, newPlan, newPortfolio, portfolioValue, usePlayground, type Plan, type Portfolio } from '@/playground'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { MixIcon } from '@/components/icons'
+import { MixExamples } from '@/components/MixExamples'
 import { PhonePreview } from '@/components/PhonePreview'
 import { PlanEditor } from '@/components/PlanEditor'
 
@@ -76,6 +77,19 @@ export default function App() {
             <Plus /> Portfolio
           </Button>
         </div>
+
+        {selected && (
+          <MixExamples
+            onPick={(example) =>
+              setState((s) => ({
+                ...s,
+                mixSize: example.size,
+                mixLayout: 'ordered',
+                portfolios: s.portfolios.map((p) => (p.id === selected.id ? { ...p, plans: examplePlans(example) } : p)),
+              }))
+            }
+          />
+        )}
 
         {selected && (
           <PortfolioEditor

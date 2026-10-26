@@ -27,19 +27,36 @@ export function buildMix(slices: MixSlice[], size: MixSize, options: { layout: M
 }
 
 /**
- * Lays the colours out largest first in the grid's left and right halves, each filled row by row
- * from its top-left, the left half before the right. A colour that runs from the left half's
- * lower rows into the right half can end up in two pieces.
+ * Lays the colours out in the grid's two Sides. Going down from the second largest, each colour
+ * sits whole in the right Side if it still fits there, otherwise in the left; the largest takes
+ * the cells left over at the top of both Sides, so it is the only one that can span them. Each
+ * Side is filled row by row from its top-left, turning back at the end of each row so every
+ * colour stays one edge-joined piece.
  */
 function orderedLayout(shares: Share[], size: number): (string | null)[][] {
   const cells: (string | null)[][] = Array.from({ length: size }, () => Array<string | null>(size).fill(null))
-  const keys = shares.flatMap((s) => Array<string>(s.cells).fill(s.key))
+  const [largest, ...rest] = shares
+  if (!largest) return cells
   const width = size / 2
-  const perHalf = width * size
-  for (let i = 0; i < keys.length; i++) {
-    const j = i % perHalf
-    cells[Math.floor(j / width)]![Math.floor(i / perHalf) * width + (j % width)] = keys[i]!
+  const perSide = width * size
+  const left: Share[] = []
+  const right: Share[] = []
+  let rightCells = 0
+  for (const s of rest) {
+    if (rightCells + s.cells <= perSide) {
+      right.push(s)
+      rightCells += s.cells
+    } else left.push(s)
   }
+  const keys = (side: Share[], lead: number) => [...Array<string>(lead).fill(largest.key), ...side.flatMap((s) => Array<string>(s.cells).fill(s.key))]
+  const spill = perSide - rightCells
+  const sides = [keys(left, largest.cells - spill), keys(right, spill)]
+  sides.forEach((side, n) =>
+    side.forEach((key, i) => {
+      const row = Math.floor(i / width)
+      cells[row]![n * width + (row % 2 ? width - 1 - (i % width) : i % width)] = key
+    }),
+  )
   return cells
 }
 
@@ -124,8 +141,8 @@ interface Share {
 
 /**
  * Splits `total` cells between Plan colours by value, largest colour first. In an ordered Mix a
- * colour with more than half the value but less than three quarters takes exactly the left half,
- * and the other colours split the right half.
+ * colour with more than half the value but less than three quarters takes exactly the left Side,
+ * and the other colours split the right Side.
  */
 function allocate(slices: MixSlice[], total: number, layout: MixLayout): { shares: Share[]; hidden: number } {
   const byKey = new Map<string, number>()

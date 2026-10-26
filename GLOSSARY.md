@@ -29,8 +29,12 @@ A Portfolio's icon: a square grid (4×4 or 8×8) filled with Plan colours, where
 _Avoid_: Heatmap, treemap, allocation chart
 
 **Mix layout**:
-How a Mix places its Plan colours: Random (each colour one edge-joined piece, placed by the Mix's seed) or Ordered (largest colour first, laid out the same way every time).
+How a Mix places its Plan colours: Random (each colour one edge-joined piece, placed by the Mix's seed) or Ordered (largest colour first, laid out the same way every time, in two Sides).
 _Avoid_: mode
+
+**Side**:
+One of the two halves, left and right, that an Ordered Mix is laid out in. Only the largest Plan colour may span both Sides; every other colour sits whole in one Side. When colours tie on value, the one listed first counts as the larger.
+_Avoid_: column, half (Half is a Slope)
 
 **Plan colour**:
 The colour family and Tint a Plan is drawn in. Different Plans may share a Plan colour when they are the same kind of plan.
