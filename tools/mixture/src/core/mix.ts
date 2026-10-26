@@ -30,8 +30,8 @@ export function buildMix(slices: MixSlice[], size: MixSize, options: { layout: M
  * Lays the colours out in the grid's two Sides. Going down from the second largest, each colour
  * sits whole in the right Side if it still fits there, otherwise in the left; the largest takes
  * the cells left over at the top of both Sides, so it is the only one that can span them. Each
- * Side is filled row by row from its top-left, turning back at the end of each row so every
- * colour stays one edge-joined piece.
+ * Side has a Turning fill: row by row from its top-left, turning back at the end of each row so
+ * every colour stays one edge-joined piece.
  */
 function orderedLayout(shares: Share[], size: number): (string | null)[][] {
   const cells: (string | null)[][] = Array.from({ length: size }, () => Array<string | null>(size).fill(null))
