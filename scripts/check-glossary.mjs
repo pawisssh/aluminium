@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-// Fails when code under tools/ uses a word GLOSSARY.md lists under _Avoid_.
+// Fails when code under tools/, or the files given ("-" for stdin), uses a word GLOSSARY.md lists
+// under _Avoid_. The commit-msg hook and the PR text workflow pass their text on stdin.
 // Run from anywhere: node scripts/check-glossary.mjs [file ...]
-// Given files ("-" for stdin), checks those instead, as the commit-msg hook and PR text check do.
 import { readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 

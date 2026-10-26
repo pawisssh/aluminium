@@ -118,7 +118,8 @@ function neighbours(i: number, size: number): number[] {
   return out
 }
 
-function isOnePiece(cells: Set<number>, size: number): boolean {
+/** Whether the cells (indexes row by row into a size×size grid) make one edge-joined piece. */
+export function isOnePiece(cells: Set<number>, size: number): boolean {
   const first = cells.values().next()
   if (first.done) return true
   const seen = new Set([first.value])
