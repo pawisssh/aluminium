@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { Dices, Plus, RotateCcw, TriangleAlert } from 'lucide-react'
 import { colourFromKey, colourHex, colourKey, COLOUR_FAMILIES } from '@/core/colours'
-import { buildMix, type Mix, type MixMode, type MixSize } from '@/core/mix'
+import { buildMix, type Mix, type MixLayout, type MixSize } from '@/core/mix'
 import { baht, generateRandomSeed, initialPlayground, newPlan, newPortfolio, portfolioValue, usePlayground, type Plan, type Portfolio } from '@/playground'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -14,12 +14,12 @@ import { PlanEditor } from '@/components/PlanEditor'
 
 export default function App() {
   const [state, setState] = usePlayground()
-  const { portfolios, mixSize, mixMode, selectedId } = state
+  const { portfolios, mixSize, mixLayout, selectedId } = state
   const selected = portfolios.find((p) => p.id === selectedId) ?? portfolios[0]
 
   const mixes = useMemo(
-    () => new Map<string, Mix>(portfolios.map((p) => [p.id, buildMix(p.plans, mixSize, { mode: mixMode, seed: p.mixSeed })])),
-    [portfolios, mixSize, mixMode],
+    () => new Map<string, Mix>(portfolios.map((p) => [p.id, buildMix(p.plans, mixSize, { layout: mixLayout, seed: p.mixSeed })])),
+    [portfolios, mixSize, mixLayout],
   )
 
   const updatePortfolio = (p: Portfolio) => setState((s) => ({ ...s, portfolios: s.portfolios.map((q) => (q.id === p.id ? p : q)) }))
@@ -46,7 +46,7 @@ export default function App() {
               </ToggleGroup>
             </Setting>
             <Setting label="Mix layout">
-              <ToggleGroup variant="outline" spacing={0} value={[mixMode]} onValueChange={(v) => v[0] && setState((s) => ({ ...s, mixMode: v[0] as MixMode }))}>
+              <ToggleGroup variant="outline" spacing={0} value={[mixLayout]} onValueChange={(v) => v[0] && setState((s) => ({ ...s, mixLayout: v[0] as MixLayout }))}>
                 <ToggleGroupItem value="random">Random</ToggleGroupItem>
                 <ToggleGroupItem value="ordered">Ordered</ToggleGroupItem>
               </ToggleGroup>

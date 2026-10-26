@@ -40,7 +40,7 @@ function pieces(cells: (string | null)[][], key: string): number {
 
 describe('buildMix', () => {
   it('fills every cell with the only Plan colour', () => {
-    const mix = buildMix([{ value: 1000, colour: purple }], 4, { mode: 'random', seed: 'a' })
+    const mix = buildMix([{ value: 1000, colour: purple }], 4, { layout: 'random', seed: 'a' })
     expect(mix.cells.flat()).toEqual(Array(16).fill('purple-100'))
   })
 
@@ -49,8 +49,8 @@ describe('buildMix', () => {
       { value: 750, colour: purple },
       { value: 250, colour: green },
     ]
-    expect(counts(buildMix(slices, 4, { mode: 'random', seed: 'a' }).cells)).toEqual({ 'purple-100': 12, 'green-100': 4 })
-    expect(counts(buildMix(slices, 8, { mode: 'random', seed: 'a' }).cells)).toEqual({ 'purple-100': 48, 'green-100': 16 })
+    expect(counts(buildMix(slices, 4, { layout: 'random', seed: 'a' }).cells)).toEqual({ 'purple-100': 12, 'green-100': 4 })
+    expect(counts(buildMix(slices, 8, { layout: 'random', seed: 'a' }).cells)).toEqual({ 'purple-100': 48, 'green-100': 16 })
   })
 
   it('hands leftover cells to the largest remainders so the grid is always full', () => {
@@ -60,7 +60,7 @@ describe('buildMix', () => {
       { value: 25, colour: green },
       { value: 16, colour: yellow },
     ]
-    expect(counts(buildMix(slices, 4, { mode: 'random', seed: 'a' }).cells)).toEqual({
+    expect(counts(buildMix(slices, 4, { layout: 'random', seed: 'a' }).cells)).toEqual({
       'purple-100': 9,
       'green-100': 4,
       'yellow-100': 3,
@@ -73,7 +73,7 @@ describe('buildMix', () => {
       { value: 2, colour: green },
       { value: 1, colour: yellow },
     ]
-    expect(counts(buildMix(slices, 4, { mode: 'random', seed: 'a' }).cells)).toEqual({
+    expect(counts(buildMix(slices, 4, { layout: 'random', seed: 'a' }).cells)).toEqual({
       'purple-100': 14,
       'green-100': 1,
       'yellow-100': 1,
@@ -85,7 +85,7 @@ describe('buildMix', () => {
     const slices = families.flatMap((family, f) =>
       ([100, 75, 50, 25] as const).map((tint, t) => ({ value: 100 - f * 4 - t, colour: { family, tint } })),
     )
-    const mix = buildMix(slices, 4, { mode: 'random', seed: 'a' })
+    const mix = buildMix(slices, 4, { layout: 'random', seed: 'a' })
     expect(Object.values(counts(mix.cells))).toEqual(Array(16).fill(1))
     expect(mix.cells.flat()).not.toContain('navy-25')
     expect(mix.hiddenColours).toBe(4)
@@ -98,21 +98,21 @@ describe('buildMix', () => {
       // A spread of portfolios: 1 to 5 colours with uneven values.
       const n = 1 + (trial % palette.length)
       const slices = palette.slice(0, n).map((colour, i) => ({ value: 1 + ((trial * 37 + i * 101) % 97), colour }))
-      const mix = buildMix(slices, size, { mode: 'random', seed: `t${trial}` })
+      const mix = buildMix(slices, size, { layout: 'random', seed: `t${trial}` })
       for (const key of new Set(mix.cells.flat())) {
         expect(pieces(mix.cells, key!), `${key} in trial ${trial}`).toBe(1)
       }
     }
   })
 
-  describe.each(['random', 'ordered'] as const)('%s layout', (mode) => {
+  describe.each(['random', 'ordered'] as const)('%s layout', (layout) => {
     it('gives the same Mix for the same seed', () => {
       const slices = [
         { value: 50, colour: purple },
         { value: 30, colour: green },
         { value: 20, colour: yellow },
       ]
-      expect(buildMix(slices, 8, { mode, seed: 'x' })).toEqual(buildMix(slices, 8, { mode, seed: 'x' }))
+      expect(buildMix(slices, 8, { layout, seed: 'x' })).toEqual(buildMix(slices, 8, { layout, seed: 'x' }))
     })
   })
 
@@ -122,7 +122,7 @@ describe('buildMix', () => {
       { value: 30, colour: green },
       { value: 20, colour: yellow },
     ]
-    const layouts = new Set(['a', 'b', 'c', 'd', 'e'].map((seed) => JSON.stringify(buildMix(slices, 8, { mode: 'random', seed }).cells)))
+    const layouts = new Set(['a', 'b', 'c', 'd', 'e'].map((seed) => JSON.stringify(buildMix(slices, 8, { layout: 'random', seed }).cells)))
     expect(layouts.size).toBeGreaterThan(1)
   })
 
@@ -132,8 +132,8 @@ describe('buildMix', () => {
       { value: 50, colour: purple },
       { value: 30, colour: green },
     ]
-    const a = buildMix(slices, 4, { mode: 'ordered', seed: 'a' })
-    expect(buildMix(slices, 4, { mode: 'ordered', seed: 'b' })).toEqual(a)
+    const a = buildMix(slices, 4, { layout: 'ordered', seed: 'a' })
+    expect(buildMix(slices, 4, { layout: 'ordered', seed: 'b' })).toEqual(a)
     expect(a.cells[0]![0]).toBe('purple-100')
   })
 
@@ -151,7 +151,7 @@ describe('buildMix', () => {
         { value: 25, colour: green },
         { value: 16, colour: yellow },
       ]
-      expect(short(buildMix(slices, size, { mode: 'ordered', seed: 'a' }).cells)).toEqual(rows)
+      expect(short(buildMix(slices, size, { layout: 'ordered', seed: 'a' }).cells)).toEqual(rows)
     },
   )
 
@@ -161,11 +161,11 @@ describe('buildMix', () => {
       { value: 80, colour: purple },
       { value: 20, colour: green },
     ]
-    expect(short(buildMix(slices, 4, { mode: 'ordered', seed: 'a' }).cells)).toEqual(['PPPP', 'PPPP', 'PPPG', 'PPGG'])
+    expect(short(buildMix(slices, 4, { layout: 'ordered', seed: 'a' }).cells)).toEqual(['PPPP', 'PPPP', 'PPPG', 'PPGG'])
   })
 
   it('leaves every cell empty when the Plans have no value', () => {
-    const mix = buildMix([{ value: 0, colour: purple }], 4, { mode: 'random', seed: 'a' })
+    const mix = buildMix([{ value: 0, colour: purple }], 4, { layout: 'random', seed: 'a' })
     expect(mix.cells.flat()).toEqual(Array(16).fill(null))
   })
 })
