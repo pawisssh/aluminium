@@ -11,9 +11,9 @@ describe('defaultPlanTypes', () => {
   })
 
   it('takes each Plan type’s Brick settings and In draws from the data', () => {
-    const money = defaultPlanTypes().find((t) => t.id === 'money-plus')!
-    expect(money.brick).toEqual({ family: 'hanging', slope: 'half', seed: 'money-plus-557', guidance: 0, blockCount: 4 })
-    expect(money.inDraws).toBe(true)
+    const allWeather = defaultPlanTypes().find((t) => t.id === 'astotz-all-weather')!
+    expect(allWeather.brick).toEqual({ family: 'hanging', slope: 'flat', seed: 'astotz-all-weather-143', guidance: 0, blockCount: 3 })
+    expect(allWeather.inDraws).toBe(true)
   })
 })
 
