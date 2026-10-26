@@ -2,13 +2,13 @@ import { checkPatternRules, COVERAGE_LIMIT } from '@/vendor/fnm-core/patternRule
 import { AREA_RESAMPLE_SET, LATEST_REFERENCE_SET, referencePatternsFor, slopeShapeProblem } from '@/vendor/fnm-core/referencePatterns'
 import { templateMask } from '@/vendor/fnm-core/templateMode'
 import type { Block, PatternFamily, Slope } from '@/vendor/fnm-core/types'
-import type { BrickGrid, BrickSettings } from './brick'
+import type { BrickGrid } from './brick'
 
 export type BrickTemplateFamily = Exclude<PatternFamily, 'auto'>
 
 /** A Brick that is one Reference Pattern laid on the Brick grid by area, as block's Brick gallery draws it. */
 export interface BrickTemplate {
-  /** `family/slope/reference`: the same on every Brick grid, so it keys a Brick and the draws. */
+  /** `family/slope/reference`: the same on every Brick grid, so it keys a Brick. */
   key: string
   family: BrickTemplateFamily
   slope: Slope
@@ -71,28 +71,24 @@ export function ruleProblems(cells: boolean[][], family: BrickTemplateFamily, sl
 
 export const cellsKey = (cells: boolean[][]) => cells.map((row) => row.map((on) => (on ? '#' : '.')).join('')).join('/')
 
-/** The Brick of a template: its Brick family and Slope, so a Brick edited by hand starts from them. */
-export const templateSettings = (template: BrickTemplate): BrickSettings => ({ family: template.family, slope: template.slope, seed: template.key, template: template.key })
-
-/** Picks `count` Brick templates from the keys in draws, none twice until every one is picked. */
-export function drawBrickTemplates(keys: readonly string[], count: number, random: () => number = Math.random): BrickTemplate[] {
-  const pool = keys.flatMap((k) => byKey.get(k) ?? [])
-  const picked: BrickTemplate[] = []
-  let left: BrickTemplate[] = []
-  for (let i = 0; i < count && pool.length > 0; i++) {
-    if (left.length === 0) left = [...pool]
-    picked.push(left.splice(Math.floor(random() * left.length), 1)[0]!)
-  }
-  return picked
+/**
+ * The Brick templates a Brick of this Brick family (Auto: any of them) and Slope can be on the Brick
+ * grid: the ones that keep the rules, and only the first of those drawn alike.
+ */
+export function templateChoices(family: PatternFamily, slope: Slope, grid: BrickGrid): BrickTemplate[] {
+  const seen = new Set<string>()
+  return BRICK_TEMPLATES.filter((t) => {
+    if ((family !== 'auto' && t.family !== family) || t.slope !== slope) return false
+    const cells = templateBrick(t, grid)
+    const key = cellsKey(cells)
+    if (seen.has(key) || ruleProblems(cells, t.family, t.slope).length > 0) return false
+    seen.add(key)
+    return true
+  })
 }
 
-/**
- * The keys of the Brick templates block's Brick gallery exported as picks (its JSON, version 3), and how
- * many picks it held; a pick of a Reference this vendored core doesn't have is left out.
- */
-export function galleryPicks(json: string): { keys: string[]; picks: number } {
-  const parsed = JSON.parse(json) as { bricks?: { family?: string; slope?: string; reference?: string }[] }
-  if (!Array.isArray(parsed.bricks)) throw new Error('Not a Brick gallery export: no bricks list')
-  const keys = parsed.bricks.map((b) => `${b.family}/${b.slope}/${b.reference}`).filter((k) => byKey.has(k))
-  return { keys: [...new Set(keys)], picks: parsed.bricks.length }
+/** A random choice other than `current` while there is one; undefined when there are no choices. */
+export function otherTemplate(choices: BrickTemplate[], current: string | undefined, random: () => number = Math.random): BrickTemplate | undefined {
+  const others = choices.length > 1 ? choices.filter((t) => t.key !== current) : choices
+  return others[Math.floor(random() * others.length)]
 }

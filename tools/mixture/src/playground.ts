@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { DEFAULT_BRICK_GRID, type BrickGrid } from '@/core/brick'
-import { BRICK_TEMPLATES, ruleProblems, templateBrick } from '@/core/brickTemplates'
 import type { PlanColour } from '@/core/colours'
 import type { MixLayout, MixSize } from '@/core/mix'
 import { defaultPlanTypes, drawPlanTypes, type PlanType } from '@/core/planTypes'
@@ -28,8 +27,6 @@ export interface Portfolio<P extends Plan = Plan> {
 export interface Playground {
   portfolios: Portfolio[]
   planTypes: PlanType[]
-  /** The keys of the Brick templates a drawn Brick may be. */
-  templatesInDraws: string[]
   brickGrid: BrickGrid
   mixSize: MixSize
   mixLayout: MixLayout
@@ -50,11 +47,8 @@ export function initialPlayground(): Playground {
     { id: id(), name: 'Retirement', mixSeed: 'retirement', plans: [plan('tax-saving', 98000, 1.12), plan('first-million', 42356.67, 0.54), plan('thai-stocks', 15000, -0.81)] },
     { id: id(), name: 'Cash', mixSeed: 'cash', plans: [plan('e-savings', 40000), plan('money-plus', 26249.43, 0.12)] },
   ]
-  return { portfolios, planTypes: defaultPlanTypes(), templatesInDraws: defaultTemplatesInDraws(), brickGrid: DEFAULT_BRICK_GRID, mixSize: 4, mixLayout: 'random', selectedId: portfolios[0]!.id }
+  return { portfolios, planTypes: defaultPlanTypes(), brickGrid: DEFAULT_BRICK_GRID, mixSize: 4, mixLayout: 'random', selectedId: portfolios[0]!.id }
 }
-
-/** Every Brick template that keeps the rules on the default Brick grid. */
-export const defaultTemplatesInDraws = () => BRICK_TEMPLATES.filter((t) => ruleProblems(templateBrick(t, DEFAULT_BRICK_GRID), t.family, t.slope).length === 0).map((t) => t.key)
 
 /** The Plans whose Plan type still exists, each with that type's name, Plan colour and Brick. */
 export function showPlans(plans: Plan[], types: PlanType[]): ShownPlan[] {
@@ -94,10 +88,7 @@ export const portfolioValue = (p: { plans: { value: number }[] }) => p.plans.red
 function load(): Playground | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return null
-    const stored = JSON.parse(raw) as Playground
-    // Saved before Brick templates existed.
-    return { ...stored, templatesInDraws: stored.templatesInDraws ?? defaultTemplatesInDraws() }
+    return raw ? (JSON.parse(raw) as Playground) : null
   } catch {
     return null
   }

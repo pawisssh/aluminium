@@ -17,13 +17,11 @@ import { MIX_CASE_COLOURS } from '@/core/mixCases'
 import { PhonePreview } from '@/components/PhonePreview'
 import { PlanEditor } from '@/components/PlanEditor'
 import { PlanTypes } from '@/components/PlanTypes'
-import { BrickTemplates } from '@/components/BrickTemplates'
 
-const PAGES = ['playground', 'bricks', 'templates', 'cases'] as const
-type Page = (typeof PAGES)[number]
-const pageFromHash = (): Page => PAGES.find((p) => `#${p}` === window.location.hash) ?? 'playground'
+type Page = 'playground' | 'bricks' | 'cases'
+const pageFromHash = (): Page => (window.location.hash === '#cases' ? 'cases' : window.location.hash === '#bricks' ? 'bricks' : 'playground')
 
-/** The page in the URL hash, so #bricks, #templates and #cases can be linked. */
+/** The page in the URL hash, so #bricks and #cases can be linked. */
 function usePage() {
   const [page, setPage] = useState(pageFromHash)
   useEffect(() => {
@@ -37,7 +35,7 @@ function usePage() {
 export default function App() {
   const [state, setState] = usePlayground()
   const [page, setPage] = usePage()
-  const { planTypes, templatesInDraws, brickGrid, mixSize, mixLayout, selectedId } = state
+  const { planTypes, brickGrid, mixSize, mixLayout, selectedId } = state
   const portfolios = useMemo(() => state.portfolios.map((p) => ({ ...p, plans: showPlans(p.plans, planTypes) })), [state.portfolios, planTypes])
   const selected = portfolios.find((p) => p.id === selectedId) ?? portfolios[0]
 
@@ -77,7 +75,6 @@ export default function App() {
                 <ToggleGroup variant="outline" spacing={0} value={[page]} onValueChange={(v) => v[0] && setPage(v[0] as Page)}>
                   <ToggleGroupItem value="playground">Playground</ToggleGroupItem>
                   <ToggleGroupItem value="bricks">Bricks</ToggleGroupItem>
-                  <ToggleGroupItem value="templates">Brick templates</ToggleGroupItem>
                   <ToggleGroupItem value="cases">Mix cases</ToggleGroupItem>
                 </ToggleGroup>
               </Setting>
@@ -108,19 +105,9 @@ export default function App() {
           {page === 'bricks' && (
             <PlanTypes
               planTypes={planTypes}
-              templatesInDraws={templatesInDraws}
               brickGrid={brickGrid}
               plansByType={plansByType}
               onChange={(types) => setState((s) => ({ ...s, planTypes: types }))}
-              onGridChange={(grid) => setState((s) => ({ ...s, brickGrid: grid }))}
-            />
-          )}
-
-          {page === 'templates' && (
-            <BrickTemplates
-              templatesInDraws={templatesInDraws}
-              brickGrid={brickGrid}
-              onChange={(keys) => setState((s) => ({ ...s, templatesInDraws: keys }))}
               onGridChange={(grid) => setState((s) => ({ ...s, brickGrid: grid }))}
             />
           )}

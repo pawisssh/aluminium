@@ -21,7 +21,7 @@ A Plan type's icon: a single-colour Pattern-Builder Pattern on the Brick grid, s
 _Avoid_: Block (one rectangle inside a Pattern, in the Pattern Builder), icon, pixel art
 
 **Brick template**:
-A fixed Brick: one Reference Pattern from the Pattern Builder laid on the Brick grid by area, as block's Brick gallery draws it, with that Reference Pattern's Brick family and Slope. A Brick drawn at random is a Brick template in draws, or a generated Brick from a new seed when none is. Changing a template Brick's settings by hand makes it a generated Brick again.
+A fixed Brick: one Reference Pattern from the Pattern Builder laid on the Brick grid by area, as block's Brick gallery draws it. On the Bricks tab a Plan type's Brick is either generated from a seed or a Brick template of its Brick family (Auto: any) and Slope, picked from those that keep the rules, one per shape on the Brick grid.
 _Avoid_: preset
 
 **Brick grid**:
