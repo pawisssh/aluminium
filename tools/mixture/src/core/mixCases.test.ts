@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { layoutCase, mixCases, nearestMixCase, partitions } from './mixCases'
+import { createRng } from '@/vendor/fnm-core/prng'
+import { caseValues, layoutCase, mixCases, nearestMixCase, partitions } from './mixCases'
 
 /** Each colour's bounding box as [width, rows], with whether it fills the box and stays in one Side. */
 function pieces(cells: number[][]) {
@@ -81,5 +82,24 @@ describe('nearestMixCase', () => {
   it('keeps the colour count when no case can give a Dominant Plan colour exactly the left Side', () => {
     const { mixCase } = nearestMixCase([55, 5, 5, 5, 5, 5, 5, 5, 5, 5])
     expect(mixCase.sizes).toHaveLength(10)
+  })
+})
+
+describe('caseValues', () => {
+  it('draws values, largest first and adding up to 100, that snap back to the case', () => {
+    for (const [n, c] of mixCases(11).entries()) {
+      for (const seed of ['a', 'b', 'c', 'd', 'e']) {
+        const values = caseValues(c, createRng(`${seed}${n}`))
+        expect(values).toEqual([...values].sort((a, b) => b - a))
+        expect(values.reduce((a, b) => a + b, 0)).toBeCloseTo(100, 0)
+        expect(nearestMixCase(values).mixCase.sizes, `${c.sizes} from ${values}`).toEqual(c.sizes)
+      }
+    }
+  })
+
+  it('draws different values each time', () => {
+    const [, , c] = mixCases(11)
+    const rng = createRng('x')
+    expect(caseValues(c!, rng)).not.toEqual(caseValues(c!, rng))
   })
 })

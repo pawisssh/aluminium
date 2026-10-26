@@ -94,3 +94,21 @@ export function nearestMixCase(values: number[]): { mixCase: MixCase; number: nu
   const best = narrowed.reduce((a, b) => (gap(b) < gap(a) ? b : a))
   return { mixCase: best, number: ALL_CASES.indexOf(best) + 1 }
 }
+
+const CASE_VALUE_ATTEMPTS = 200
+
+/**
+ * Random Plan values in percent, largest first, that `nearestMixCase` snaps back to `mixCase`.
+ * Each colour's share is drawn up to 40% either side of its piece, and draws that land on
+ * another case are tried again; past every attempt, the case's exact shares.
+ */
+export function caseValues(mixCase: MixCase, rng: () => number): number[] {
+  const sameCase = (values: number[]) => nearestMixCase(values).mixCase.sizes.join() === mixCase.sizes.join()
+  for (let attempt = 0; attempt < CASE_VALUE_ATTEMPTS; attempt++) {
+    const drawn = mixCase.sizes.map((size) => size * (0.6 + 0.8 * rng()))
+    const total = drawn.reduce((a, b) => a + b, 0)
+    const values = drawn.map((v) => Math.round((v / total) * 10000) / 100).sort((a, b) => b - a)
+    if (sameCase(values)) return values
+  }
+  return mixCase.sizes.map((size) => (size / (SIZE * SIZE)) * 100)
+}

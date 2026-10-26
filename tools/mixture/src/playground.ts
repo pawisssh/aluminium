@@ -78,28 +78,23 @@ export function initialPlayground(): Playground {
   return { portfolios, mixSize: 4, mixLayout: 'random', selectedId: portfolios[0]!.id }
 }
 
-export interface MixExample {
-  name: string
-  size: MixSize
-  /** Each Plan's colour family and share of the Portfolio in percent, largest first. */
-  shares: [ColourFamily, number][]
-}
-
-/** Portfolios that show how a 4×4 Ordered Mix snaps Plan values to the nearest Mix case. */
-export const MIX_EXAMPLES: MixExample[] = [
-  { name: 'Four equal', size: 4, shares: [['blue', 25], ['navy', 25], ['orange', 25], ['yellow', 25]] },
-  { name: 'Nearest pieces', size: 4, shares: [['blue', 40], ['navy', 30], ['orange', 20], ['yellow', 10]] },
-  { name: 'Tie', size: 4, shares: [['blue', 31.25], ['navy', 31.25], ['yellow', 18.75], ['orange', 18.75]] },
-  { name: 'Dominant', size: 4, shares: [['blue', 59], ['green', 25], ['yellow', 16]] },
-  { name: 'Near 75%', size: 4, shares: [['blue', 70], ['navy', 30]] },
-  { name: 'Past 75%', size: 4, shares: [['blue', 80], ['green', 20]] },
-  { name: 'Tiny Plans', size: 4, shares: [['blue', 97], ['navy', 2], ['yellow', 1]] },
-  { name: 'Eight colours', size: 4, shares: [['blue', 30], ['navy', 20], ['purple', 15], ['orange', 10], ['yellow', 10], ['green', 6], ['red', 5], ['indigo', 4]] },
+/** The Plan colours Mix cases are drawn in: every family at Tint 100, then Green and Red at 150. */
+export const CASE_COLOURS: PlanColour[] = [
+  ...(Object.keys(COLOUR_FAMILIES) as ColourFamily[]).map((family) => ({ family, tint: 100 as const })),
+  { family: 'green', tint: 150 },
+  { family: 'red', tint: 150 },
 ]
 
-/** One Plan per share of a Mix example, worth that many thousand baht. */
-export function examplePlans(example: MixExample): Plan[] {
-  return example.shares.map(([family, share], i) => plan(`Plan ${i + 1}`, share * 1000, 0, family, { family: 'auto', slope: 'half' }, `${example.name}-${i}`))
+/** One Plan per value in percent, worth that many thousand baht, in the case colours in turn. */
+export function casePlans(values: number[]): Plan[] {
+  return values.map((value, i) => ({
+    id: id(),
+    name: `Plan ${i + 1}`,
+    value: Math.round(value * 1000),
+    change: 0,
+    colour: CASE_COLOURS[i]!,
+    brick: { family: 'auto', slope: 'half', seed: generateRandomSeed() },
+  }))
 }
 
 /** A Plan in a colour family the Portfolio doesn't use yet, while one is free. */

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Dices, Plus, RotateCcw, TriangleAlert } from 'lucide-react'
 import { colourFromKey, colourHex, colourKey, COLOUR_FAMILIES } from '@/core/colours'
 import { buildMix, type Mix, type MixLayout, type MixSize } from '@/core/mix'
-import { baht, examplePlans, generateRandomSeed, initialPlayground, newPlan, newPortfolio, portfolioValue, usePlayground, type Plan, type Portfolio } from '@/playground'
+import { baht, casePlans, generateRandomSeed, initialPlayground, newPlan, newPortfolio, portfolioValue, usePlayground, type Plan, type Portfolio } from '@/playground'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -10,7 +10,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { MixIcon } from '@/components/icons'
 import { MixCases } from '@/components/MixCases'
-import { MixExamples } from '@/components/MixExamples'
+import { MixCasePicker } from '@/components/MixCasePicker'
 import { PhonePreview } from '@/components/PhonePreview'
 import { PlanEditor } from '@/components/PlanEditor'
 
@@ -113,13 +113,13 @@ export default function App() {
             </div>
 
             {selected && (
-              <MixExamples
-                onPick={(example) =>
+              <MixCasePicker
+                onPick={(values) =>
                   setState((s) => ({
                     ...s,
-                    mixSize: example.size,
+                    mixSize: 4,
                     mixLayout: 'ordered',
-                    portfolios: s.portfolios.map((p) => (p.id === selected.id ? { ...p, plans: examplePlans(example) } : p)),
+                    portfolios: s.portfolios.map((p) => (p.id === selected.id ? { ...p, plans: casePlans(values) } : p)),
                   }))
                 }
               />

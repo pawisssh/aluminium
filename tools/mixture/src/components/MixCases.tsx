@@ -1,14 +1,8 @@
 import { useMemo } from 'react'
-import { COLOUR_FAMILIES, colourHex, colourKey, type ColourFamily, type PlanColour } from '@/core/colours'
+import { COLOUR_FAMILIES, colourHex, colourKey } from '@/core/colours'
 import { mixCases, PIECE_SIZES } from '@/core/mixCases'
 import { MixIcon } from '@/components/icons'
-
-/** The Plan colours Plans mostly use: every family at Tint 100, then Green and Red at 150. */
-const CASE_COLOURS: PlanColour[] = [
-  ...(Object.keys(COLOUR_FAMILIES) as ColourFamily[]).map((family) => ({ family, tint: 100 as const })),
-  { family: 'green', tint: 150 },
-  { family: 'red', tint: 150 },
-]
+import { CASE_COLOURS } from '@/playground'
 
 const SHAPES: Record<number, string> = { 16: '4×4', 14: '2×4 + 2×3', 12: '2×4 + 2×2', 8: '2×4', 6: '2×3', 4: '2×2', 2: '2×1', 1: '1×1' }
 const percent = (cells: number) => `${(cells / 16) * 100}%`
