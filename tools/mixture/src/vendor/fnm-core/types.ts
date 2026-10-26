@@ -60,6 +60,8 @@ export interface GeneratorParams {
   guidance: number;
   /** Which Pattern family to build; absent or 'auto' lets the seed choose. */
   family?: PatternFamily;
+  /** The Reference set the Pattern is drawn from (GLOSSARY: Reference set); absent: set 1, from before sets. */
+  referenceSet?: number;
 }
 
 /** A Pattern family the user can ask for (see the generator's variants). Mountain has no 75% form. */
@@ -76,9 +78,73 @@ export interface TextZone {
   mode: TextZoneMode;
 }
 
+/**
+ * A CI-approved arrangement of slots on a Page (GLOSSARY: Page layout). 'pattern' is the Pattern alone:
+ * no slots and no Text zone. A Page with no `layout` is 'pattern'.
+ */
+export type PageLayoutId =
+  | 'pattern'
+  | 'headline'
+  | 'cover'
+  | 'product-cover'
+  | 'section-divider'
+  | 'content'
+  | 'closing';
+
+export interface PageTicker {
+  show: boolean;
+  left: string;
+  right: string;
+}
+
+export interface PageLogo {
+  show: boolean;
+}
+
+/** A photo as the user imported it. `src` is an `image/*` data URL; width and height are in pixels. */
+export interface PagePhoto {
+  src: string;
+  width: number;
+  height: number;
+}
+
+/** What the user typed into a Page layout's slots. Empty text is simply absent. */
+export interface PageContent {
+  /** May hold `[bracketed]` runs: the words to Highlight. */
+  headline?: string;
+  secondary?: string;
+  label?: string;
+  ticker?: PageTicker;
+  /** Shown by default whenever the layout is not 'pattern'. */
+  logo?: PageLogo;
+  photo?: PagePhoto;
+}
+
+/** A partial edit of a Page's content: nested ticker and logo merge field by field, photo is set with setPhoto. */
+export interface PageContentPatch {
+  headline?: string;
+  secondary?: string;
+  label?: string;
+  ticker?: Partial<PageTicker>;
+  logo?: Partial<PageLogo>;
+}
+
 export interface Page {
   pattern: Block[];
   textZone?: TextZone;
+  /** Absent means 'pattern'. */
+  layout?: PageLayoutId;
+  content?: PageContent;
+  /**
+   * The seed this Page's Pattern is generated from, so Pages of a deck differ. A Document with one Page keeps
+   * its seed in `Document.seed` and leaves this absent; a Document with several Pages gives every Page its own.
+   */
+  seed?: string;
+  /**
+   * True once this Page's Pattern was edited by hand or picked (a Format or Density change then remaps it
+   * rather than regenerating it). Like `seed`: absent on a one-Page Document (see `Document.edited`).
+   */
+  edited?: boolean;
 }
 
 export interface Document {
@@ -93,13 +159,25 @@ export interface Document {
   pages: Page[];
   customSize?: CustomSize;
   edited: boolean;
+  /**
+   * True when the Pages are drawn and exported without the Colourway background: Blocks, text and wordmark
+   * only, on transparency. Text colours still follow the Colourway background. Absent means the background is drawn.
+   */
+  transparentBackground?: boolean;
+}
+
+/** A Candidate: the Pattern a seed drew for a Page, offered with the rest of its Candidate set (GLOSSARY). */
+export interface Candidate {
+  seed: string;
+  pattern: Block[];
 }
 
 export type Command =
   | { type: 'createDocument' }
-  | { type: 'generate'; seed?: string }
+  | { type: 'generate'; seed?: string; pageIndex?: number }
   | { type: 'setGeneratorParams'; params: Partial<GeneratorParams> }
   | { type: 'setColourway'; colourway: string }
+  | { type: 'setTransparentBackground'; transparent: boolean }
   | { type: 'setFormat'; format: FormatId; widthPx?: number; heightPx?: number }
   | { type: 'setDensity'; density: DensityLevel }
   | {
@@ -119,8 +197,25 @@ export type Command =
     }
   | { type: 'removeBlock'; id: string; pageIndex?: number }
   | { type: 'setBlockTint'; id: string; tint: number; pageIndex?: number }
-  | { type: 'setTextZone'; zone: TextZone }
-  | { type: 'clearTextZone' }
+  | { type: 'setPageLayout'; layout: PageLayoutId; pageIndex?: number }
+  | { type: 'setPageContent'; content: PageContentPatch; pageIndex?: number }
+  | { type: 'setPhoto'; photo: PagePhoto; pageIndex?: number }
+  | { type: 'clearPhoto'; pageIndex?: number }
+  | { type: 'setTextZone'; zone: TextZone; pageIndex?: number }
+  | { type: 'clearTextZone'; pageIndex?: number }
+  /** Inserts a new Page with a fresh Pattern after `afterIndex` (-1 puts it first); absent means at the end. */
+  | { type: 'addPage'; layout: PageLayoutId; afterIndex?: number }
+  /** Inserts a copy of a Page (Pattern, seed, layout and content) right after it. */
+  | { type: 'duplicatePage'; pageIndex: number }
+  /** Removes a Page; the last remaining Page cannot be removed. */
+  | { type: 'removePage'; pageIndex: number }
+  /** Moves the Page at `from` so it ends up at index `to`. */
+  | { type: 'movePage'; from: number; to: number }
+  /**
+   * Gives Page `pageIndex` the picked Candidate's Pattern and seed, as an edited Pattern; like Generate, it moves
+   * the Document to the newest Reference set.
+   */
+  | { type: 'pickCandidate'; candidate: Candidate; pageIndex?: number }
   | { type: 'loadDocument'; document: Document };
 
 export interface SerializedFile {
@@ -138,6 +233,8 @@ export type ShareLinkResult =
   | { error: { code: 'link.invalid' | 'link.unsupportedVersion'; message: string } };
 
 export interface AdvisoryBlockCountWarning {
+  /** The Page the Advisory is about. */
+  pageIndex?: number;
   code: 'advisory.blockCount';
   message: string;
   count?: number;
@@ -145,12 +242,16 @@ export interface AdvisoryBlockCountWarning {
 }
 
 export interface AdvisoryCornerMeetsWarning {
+  /** The Page the Advisory is about. */
+  pageIndex?: number;
   code: 'advisory.cornerMeets';
   message: string;
   points: Array<{ col: number; row: number }>;
 }
 
 export interface AdvisoryDisconnectedWarning {
+  /** The Page the Advisory is about. */
+  pageIndex?: number;
   code: 'advisory.disconnected';
   message: string;
   /** Which Pattern rules are broken: `disconnected` and/or `noEdge`. */
@@ -158,6 +259,8 @@ export interface AdvisoryDisconnectedWarning {
 }
 
 export interface AdvisoryTextOverlapWarning {
+  /** The Page the Advisory is about. */
+  pageIndex?: number;
   code: 'advisory.textOverlap';
   message: string;
   /** Share of the Clear Text zone covered by Blocks (0-1). */
@@ -166,8 +269,25 @@ export interface AdvisoryTextOverlapWarning {
   reachesInterior: boolean;
 }
 
+export interface AdvisoryHeadlineCapsWarning {
+  code: 'advisory.headlineCaps';
+  message: string;
+  pageIndex: number;
+}
+
+export interface AdvisoryHighlightWordsWarning {
+  code: 'advisory.highlightWords';
+  message: string;
+  pageIndex: number;
+  /** Words inside the `[brackets]`. */
+  count: number;
+  max: number;
+}
+
 export type Warning =
   | AdvisoryBlockCountWarning
+  | AdvisoryHeadlineCapsWarning
+  | AdvisoryHighlightWordsWarning
   | AdvisoryCornerMeetsWarning
   | AdvisoryDisconnectedWarning
   | AdvisoryTextOverlapWarning

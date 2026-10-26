@@ -9,7 +9,7 @@ import type {
   TextZone,
 } from './types.js';
 import { checkPatternRules, COVERAGE_LIMIT, patternMasses, repairPatternRules } from './patternRules.js';
-import { patternSimilarity, slopeShapeProblem, trendDegrees } from './referencePatterns.js';
+import { LATEST_REFERENCE_SET, patternSimilarity, slopeShapeProblem, trendDegrees } from './referencePatterns.js';
 import { maybeAddCornerMeet } from './cornerMeet.js';
 import { measureClearZoneOverlap } from './textZone.js';
 import { GUIDANCE_SIMILARITY_SHARE, TEMPLATE_FROM, templateChance, templatePattern } from './templateMode.js';
@@ -100,7 +100,7 @@ export function blockCountRangeFor(grid: Grid): { min: number; max: number } {
 export const DEFAULT_GUIDANCE = 90;
 
 export function defaultGeneratorParams(grid: Grid): GeneratorParams {
-  return { slope: 'half', blockCount: defaultBlockCountFor(grid), cornerMeetLimit: 2, guidance: DEFAULT_GUIDANCE };
+  return { slope: 'half', blockCount: defaultBlockCountFor(grid), cornerMeetLimit: 2, guidance: DEFAULT_GUIDANCE, referenceSet: LATEST_REFERENCE_SET };
 }
 
 /** Returns an error message, or null when the (partial) params are valid. */
@@ -125,6 +125,12 @@ export function validateGeneratorParams(p: Partial<GeneratorParams>): string | n
   }
   if (p.family !== undefined && !PATTERN_FAMILIES.includes(p.family)) {
     return `family must be one of ${PATTERN_FAMILIES.join(', ')}.`;
+  }
+  if (
+    p.referenceSet !== undefined &&
+    !(Number.isInteger(p.referenceSet) && p.referenceSet >= 1 && p.referenceSet <= LATEST_REFERENCE_SET)
+  ) {
+    return `referenceSet must be an integer from 1 to ${LATEST_REFERENCE_SET}.`;
   }
   return null;
 }
@@ -287,7 +293,7 @@ type Feasible = (sum: number, parts: number) => boolean;
  * on that axis, where `limit` (the Grid side) bounds the table.
  */
 function feasibility(sizes: readonly number[], limit: number): Feasible {
-  if (sizes.length === BASE_BLOCK_SIZES.length) {
+  if (sizes.length === BASE_BLOCK_SIZES.length && sizes.every((z, i) => z === BASE_BLOCK_SIZES[i])) {
     return (sum, parts) =>
       parts === 0
         ? sum === 0
@@ -904,7 +910,7 @@ function skyline(
         const miss = Math.abs(count - rects.length);
         scored++;
         const sim = guided
-          ? patternSimilarity(extra.length > 0 ? toBlocks([...rects, ...extra], grid, tintCount) : blocks, grid, { slope, ...(chosen === 'auto' ? {} : { family: ctx.variant }) }).iou
+          ? patternSimilarity(extra.length > 0 ? toBlocks([...rects, ...extra], grid, tintCount) : blocks, grid, { slope, set: params.referenceSet ?? 1, ...(chosen === 'auto' ? {} : { family: ctx.variant }) }).iou
           : 0;
         const score =
           (rulesOk ? 0 : 50_000) +

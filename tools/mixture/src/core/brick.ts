@@ -1,6 +1,7 @@
 import { getColourway, DEFAULT_COLOURWAY_ID } from '@/vendor/fnm-core/colourway'
 import { generatePattern } from '@/vendor/fnm-core/generator'
 import { createRng } from '@/vendor/fnm-core/prng'
+import { LATEST_REFERENCE_SET } from '@/vendor/fnm-core/referencePatterns'
 import type { Grid, PatternFamily, Slope } from '@/vendor/fnm-core/types'
 
 export const BRICK_SIZE = 4
@@ -28,6 +29,7 @@ export function generateBrick(settings: BrickSettings): boolean[][] {
     blockCount: settings.blockCount ?? BRICK_DEFAULTS.blockCount,
     guidance: settings.guidance ?? BRICK_DEFAULTS.guidance,
     cornerMeetLimit: settings.cornerMeetLimit ?? BRICK_DEFAULTS.cornerMeetLimit,
+    referenceSet: LATEST_REFERENCE_SET,
   })
   const mask = Array.from({ length: BRICK_SIZE }, () => Array<boolean>(BRICK_SIZE).fill(false))
   for (const b of blocks)

@@ -1,4 +1,5 @@
 import { getColourway, migrateColourwayId } from './constants.js';
+import { cleanContent, contentProblem } from './content.js';
 import { densityLevelsFor, FORMATS } from './formats.js';
 import { isValidBlockSize, validateGeneratorParams } from './generator.js';
 import { gridFor } from './grid.js';
@@ -11,11 +12,20 @@ import type {
   FormatId,
   GeneratorParams,
   Page,
+  PageContent,
+  PageLayoutId,
   TextZone,
   SerializedFile,
 } from './types.js';
 
-export const CURRENT_SCHEMA_VERSION = 1;
+/**
+ * File schema 2 adds Page `layout` and `content`. Schema 1 files hold neither and load unchanged as
+ * Pattern only (no layout), so the Document itself stays at `version: 1`.
+ * File schema 3 (decks) adds the Page `seed` and `edited` that a Document with several Pages carries, and the
+ * layouts 'section-divider', 'content' and 'closing'. Schema 1 and 2 files hold none of it and load unchanged:
+ * a Page with no seed or edited state of its own uses the Document's (see pages.ts).
+ */
+export const CURRENT_SCHEMA_VERSION = 3;
 export const CURRENT_APP_NAME = 'fnm-pattern-builder';
 
 const ALLOWED_FILE_KEYS = new Set(['app', 'schema', 'document']);
@@ -30,9 +40,11 @@ const ALLOWED_DOC_KEYS = new Set([
   'pages',
   'customSize',
   'edited',
+  'transparentBackground',
 ]);
-const ALLOWED_PAGE_KEYS = new Set(['pattern', 'textZone']);
-const ALLOWED_GENERATOR_KEYS = new Set(['slope', 'blockCount', 'cornerMeetLimit', 'guidance', 'family']);
+const ALLOWED_PAGE_KEYS = new Set(['pattern', 'textZone', 'layout', 'content', 'seed', 'edited']);
+const PAGE_LAYOUTS: readonly PageLayoutId[] = ['pattern', 'headline', 'cover', 'product-cover', 'section-divider', 'content', 'closing'];
+const ALLOWED_GENERATOR_KEYS = new Set(['slope', 'blockCount', 'cornerMeetLimit', 'guidance', 'family', 'referenceSet']);
 const ALLOWED_TEXT_ZONE_KEYS = new Set(['col', 'row', 'w', 'h', 'mode']);
 const ALLOWED_BLOCK_KEYS = new Set(['id', 'col', 'row', 'w', 'h', 'tint']);
 const ALLOWED_CUSTOM_SIZE_KEYS = new Set(['widthPx', 'heightPx']);
@@ -287,6 +299,8 @@ export function validateDocument(rawDoc: unknown): DeserializeResult {
     guidance: genRec.guidance === undefined ? 0 : (genRec.guidance as number),
     // Files saved before the family choice (or with 'auto') let the seed choose.
     ...(genRec.family !== undefined && genRec.family !== 'auto' ? { family: genRec.family as GeneratorParams['family'] } : {}),
+    // Files saved before Reference sets drew from set 1, as a missing set does.
+    ...(genRec.referenceSet !== undefined ? { referenceSet: genRec.referenceSet as number } : {}),
   };
 
   if (doc.blockCountExplicit !== undefined && typeof doc.blockCountExplicit !== 'boolean') {
@@ -295,6 +309,12 @@ export function validateDocument(rawDoc: unknown): DeserializeResult {
     };
   }
   const blockCountExplicit = doc.blockCountExplicit as boolean | undefined;
+
+  if (doc.transparentBackground !== undefined && typeof doc.transparentBackground !== 'boolean') {
+    return {
+      error: { code: 'file.invalid', message: 'transparentBackground must be a boolean' },
+    };
+  }
 
   // Pages
   if (!Array.isArray(doc.pages) || doc.pages.length === 0) {
@@ -319,10 +339,11 @@ export function validateDocument(rawDoc: unknown): DeserializeResult {
     edited: doc.edited,
   };
   const grid = gridFor(validatedDocForGrid);
-  const blockIds = new Set<string>();
   const validatedPages: Page[] = [];
 
   for (let pIdx = 0; pIdx < doc.pages.length; pIdx++) {
+    // Block ids are unique within a Page: every generated Pattern numbers its Blocks from block-1.
+    const blockIds = new Set<string>();
     const rawPage = doc.pages[pIdx];
     if (!rawPage || typeof rawPage !== 'object' || Array.isArray(rawPage)) {
       return {
@@ -359,6 +380,27 @@ export function validateDocument(rawDoc: unknown): DeserializeResult {
       const zr = validateTextZone(page.textZone, grid, pIdx);
       if (typeof zr === 'string') return { error: { code: 'file.invalid', message: zr } };
       textZone = zr;
+    }
+
+    // 'pattern' is the absence of a layout, so a Pattern-only Page looks the same before and after Phase 3.
+    let layout: PageLayoutId | undefined;
+    if (page.layout !== undefined) {
+      if (!PAGE_LAYOUTS.includes(page.layout as PageLayoutId)) {
+        return { error: { code: 'file.invalid', message: `Unknown layout on page ${pIdx}: '${String(page.layout)}'` } };
+      }
+      if (page.layout !== 'pattern') layout = page.layout as PageLayoutId;
+    }
+    if (page.seed !== undefined && (typeof page.seed !== 'string' || page.seed === '')) {
+      return { error: { code: 'file.invalid', message: `Seed on page ${pIdx} must be a non-empty string` } };
+    }
+    if (page.edited !== undefined && typeof page.edited !== 'boolean') {
+      return { error: { code: 'file.invalid', message: `Edited on page ${pIdx} must be a boolean` } };
+    }
+    let content: PageContent | undefined;
+    if (page.content !== undefined) {
+      const problem = contentProblem(page.content);
+      if (problem) return { error: { code: 'file.invalid', message: `Content on page ${pIdx}: ${problem.message}` } };
+      content = cleanContent(page.content as PageContent);
     }
 
     const validatedBlocks: Block[] = [];
@@ -471,7 +513,14 @@ export function validateDocument(rawDoc: unknown): DeserializeResult {
       });
     }
 
-    validatedPages.push({ pattern: validatedBlocks, ...(textZone ? { textZone } : {}) });
+    validatedPages.push({
+      pattern: validatedBlocks,
+      ...(textZone ? { textZone } : {}),
+      ...(layout ? { layout } : {}),
+      ...(content ? { content } : {}),
+      ...(page.seed !== undefined ? { seed: page.seed as string } : {}),
+      ...(page.edited !== undefined ? { edited: page.edited as boolean } : {}),
+    });
   }
 
   const cleanDoc: Document = {
@@ -485,6 +534,7 @@ export function validateDocument(rawDoc: unknown): DeserializeResult {
     pages: validatedPages,
     ...(customSize ? { customSize } : {}),
     edited: doc.edited,
+    ...(doc.transparentBackground === true ? { transparentBackground: true } : {}),
   };
 
   return { document: cleanDoc };
@@ -492,7 +542,8 @@ export function validateDocument(rawDoc: unknown): DeserializeResult {
 
 /**
  * Serializes a Document into a versioned JSON string.
- * Top-level structure: { "app": "fnm-pattern-builder", "schema": 1, "document": { ... } }
+ * Top-level structure: { "app": "fnm-pattern-builder", "schema": 3, "document": { ... } }
+ * The file keeps everything, photo included (share links drop the photo).
  * Colourways are referenced by id only, and tints by index only — never RGB hex.
  */
 export function serialize(doc: Document): string {
@@ -505,23 +556,31 @@ export function serialize(doc: Document): string {
       density: doc.density,
       colourway: doc.colourway,
       seed: doc.seed,
-      generator: { slope: doc.generator.slope, blockCount: doc.generator.blockCount, cornerMeetLimit: doc.generator.cornerMeetLimit, guidance: doc.generator.guidance, ...(doc.generator.family && doc.generator.family !== 'auto' ? { family: doc.generator.family } : {}) },
+      generator: { slope: doc.generator.slope, blockCount: doc.generator.blockCount, cornerMeetLimit: doc.generator.cornerMeetLimit, guidance: doc.generator.guidance, ...(doc.generator.family && doc.generator.family !== 'auto' ? { family: doc.generator.family } : {}), ...(doc.generator.referenceSet !== undefined ? { referenceSet: doc.generator.referenceSet } : {}) },
       ...(doc.blockCountExplicit !== undefined ? { blockCountExplicit: doc.blockCountExplicit } : {}),
-      pages: doc.pages.map((p) => ({
-        pattern: p.pattern.map((b) => ({
-          id: b.id,
-          col: b.col,
-          row: b.row,
-          w: b.w,
-          h: b.h,
-          tint: b.tint,
-        })),
-        ...(p.textZone
-          ? { textZone: { col: p.textZone.col, row: p.textZone.row, w: p.textZone.w, h: p.textZone.h, mode: p.textZone.mode } }
-          : {}),
-      })),
+      pages: doc.pages.map((p) => {
+        const content = cleanContent(p.content ?? {});
+        return {
+          pattern: p.pattern.map((b) => ({
+            id: b.id,
+            col: b.col,
+            row: b.row,
+            w: b.w,
+            h: b.h,
+            tint: b.tint,
+          })),
+          ...(p.textZone
+            ? { textZone: { col: p.textZone.col, row: p.textZone.row, w: p.textZone.w, h: p.textZone.h, mode: p.textZone.mode } }
+            : {}),
+          ...(p.layout && p.layout !== 'pattern' ? { layout: p.layout } : {}),
+          ...(content ? { content } : {}),
+          ...(p.seed !== undefined ? { seed: p.seed } : {}),
+          ...(p.edited !== undefined ? { edited: p.edited } : {}),
+        };
+      }),
       ...(doc.customSize ? { customSize: { widthPx: doc.customSize.widthPx, heightPx: doc.customSize.heightPx } } : {}),
       edited: doc.edited,
+      ...(doc.transparentBackground ? { transparentBackground: true } : {}),
     },
   };
 

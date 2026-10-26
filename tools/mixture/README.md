@@ -11,6 +11,6 @@ npm run check      # typecheck, tests, lint, glossary terms: what CI runs
 npm run probe -- <file>  # a test file with console.log shown (vitest hides it by default)
 ```
 
-- `src/core/mix.ts`: `buildMix` turns Plan values into a Mix (largest-remainder cell counts, one edge-joined piece per Plan colour, Random or Ordered layout).
+- `src/core/mix.ts`: `buildMix` turns Plan values into a Mix (largest-remainder cell counts, Random layout keeps each Plan colour in one edge-joined piece; Ordered fills the left and right halves row by row, left half first, and gives a colour with 50–75% of the value exactly the left half).
 - `src/core/brick.ts`: `generateBrick` draws a 4×4 Brick with the Pattern Builder's generator, vendored in `src/vendor/fnm-core` (see its README).
 - Plan colours come from neon `theme/tokens/colors.json`; the light theme from `theme.json`.

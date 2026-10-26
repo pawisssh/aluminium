@@ -50,6 +50,21 @@ function determineTextColours(bgColour: BrandColourName, bgTint: number): string
   return [BRAND_COLOURS.white[100]!];
 }
 
+/**
+ * White or Navy for text on a solid brand fill, by the Colourway text-colour rule above. `fill` is a brand hex
+ * (a background or a Tint); anything else is not a brand colour and gets Navy.
+ */
+export function textColourOnFill(fill: string): string {
+  const hex = fill.toUpperCase();
+  for (const name of Object.keys(BRAND_COLOURS) as BrandColourName[]) {
+    const tints = BRAND_COLOURS[name] as unknown as Record<number, string>;
+    for (const tint of Object.keys(tints).map(Number)) {
+      if (tints[tint]!.toUpperCase() === hex) return determineTextColours(name, tint)[0]!;
+    }
+  }
+  return BRAND_COLOURS.navy[100];
+}
+
 function getBrandHex(colour: BrandColourName, tint: number): string {
   const table = BRAND_COLOURS[colour] as unknown as Record<number, string>;
   const hex = table[tint];

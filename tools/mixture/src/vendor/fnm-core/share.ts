@@ -3,6 +3,8 @@ import { LEGACY_COLOURWAY_IDS } from './colourway.js';
 import { gridFor } from './grid.js';
 import { generatePatternDetailed, PATTERN_FAMILIES } from './generator.js';
 import { createRng } from './prng.js';
+import { withoutPhoto } from './content.js';
+import { isPageEdited, pageSeed, settlePages } from './pages.js';
 import { validateDocument } from './serialization.js';
 import type {
   Block,
@@ -10,13 +12,21 @@ import type {
   Document,
   FormatId,
   Page,
+  PageContent,
+  PageLayoutId,
   ShareLinkResult,
   Slope,
   TextZone,
 } from './types.js';
 
-/** Leading version tag of a share link fragment, e.g. `1.<payload>`. */
-const LINK_VERSION = 1;
+/**
+ * Leading version tag of a share link fragment, e.g. `1.<payload>`. Version 1 holds a Pattern only. Version 2
+ * wraps a version 1 payload with each Page's layout and content: `2.<base64url of [payload, pageExtras]>`.
+ * A link is written as version 1 whenever no Page has a layout or content, so those links stay as they were.
+ */
+const LINK_VERSION = 2;
+/** Version 3 is a deck: `3.<base64url of [payload, deckExtras]>`, written whenever a Document has several Pages. */
+const DECK_LINK_VERSION = 3;
 const MAX_FRAGMENT_LENGTH = 100_000;
 
 // Fixed orders: part of the link format. Only ever append.
@@ -33,6 +43,7 @@ const FORMAT_IDS: readonly FormatId[] = [
 const DENSITIES: readonly DensityLevel[] = ['coarse', 'medium', 'fine', 'extra-fine'];
 const SLOPE_IDS: readonly Slope[] = ['flat', 'half', '75'];
 const MODES: readonly TextZone['mode'][] = ['clear', 'flat'];
+const LAYOUT_IDS: readonly PageLayoutId[] = ['pattern', 'headline', 'cover', 'product-cover', 'section-divider', 'content', 'closing'];
 
 const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
 
@@ -108,12 +119,78 @@ const blockToArray = (b: Block, i: number) => {
   return a;
 };
 
+/** A Page's content for a link: 0, or short keys. Never the photo. */
+function contentExtra(page: Page): unknown {
+  const content = withoutPhoto(page.content);
+  if (!content) return 0;
+  const o: Record<string, unknown> = {};
+  if (content.headline !== undefined) o.h = content.headline;
+  if (content.secondary !== undefined) o.s = content.secondary;
+  if (content.label !== undefined) o.l = content.label;
+  if (content.ticker) o.t = [content.ticker.show ? 1 : 0, content.ticker.left, content.ticker.right];
+  if (content.logo) o.g = content.logo.show ? 1 : 0;
+  return o;
+}
+
+/** A Page's layout and content for a link: 0, or [layout index, content]. Never the photo. */
+function pageExtra(page: Page): unknown {
+  const c = contentExtra(page);
+  if (!page.layout && c === 0) return 0;
+  return [LAYOUT_IDS.indexOf(page.layout ?? 'pattern'), c];
+}
+
+/** A deck Page's extras: [layout index, content, seed, edited]. Every Page has them, so Pages differ after decoding. */
+function deckExtra(doc: Document, index: number): unknown {
+  const page = doc.pages[index]!;
+  return [LAYOUT_IDS.indexOf(page.layout ?? 'pattern'), contentExtra(page), pageSeed(doc, index), isPageEdited(doc, index) ? 1 : 0];
+}
+
 /**
- * Encodes a Document as a compact, URL-safe string for the URL fragment: `1.<base64url of compact JSON>`.
- * The Colourway is stored by stable index, never RGB. An unedited single-Page Document carries only its
- * inputs (the Pattern is regenerated on decode); otherwise the Block list is included too.
+ * The longest link fragment (the part after `p=`) the app offers as a share link. Past it the link is too
+ * long to paste into chat or mail safely, and the UI should offer a .fnm file instead. A one-Page Document
+ * without text stays far below it.
  */
+export const SHARE_LINK_MAX_LENGTH = 8000;
+
+export interface ShareLinkEncoding {
+  link: string;
+  /** True when a Page held a photo: links never carry photos, so the recipient sees the Page without it. */
+  photoDropped: boolean;
+  /** True when `link` is longer than SHARE_LINK_MAX_LENGTH: offer a .fnm file instead. */
+  tooLong: boolean;
+}
+
+/**
+ * Encodes a Document as a compact, URL-safe string for the URL fragment: `1.<base64url of compact JSON>`
+ * (see LINK_VERSION for composed Pages). The Colourway is stored by stable index, never RGB. An unedited
+ * single-Page Document carries only its inputs (the Pattern is regenerated on decode); otherwise the Block
+ * list is included too. A photo is never included; `photoDropped` says whether one was left out.
+ */
+export function encodeShareLinkDetailed(doc: Document): ShareLinkEncoding {
+  const photoDropped = doc.pages.some((p) => p.content?.photo !== undefined);
+  const payload = linkPayload(doc);
+  const made = (link: string): ShareLinkEncoding => ({ link, photoDropped, tooLong: link.length > SHARE_LINK_MAX_LENGTH });
+  // A transparent background rides as a third element after the extras, so it needs the wrapped form.
+  const wrap = (extras: unknown[]): string =>
+    JSON.stringify(doc.transparentBackground ? [payload, extras, 1] : [payload, extras]);
+  // A deck (several Pages) is version 3: every Page's layout, content, seed and edited state.
+  if (doc.pages.length > 1) {
+    const extras = doc.pages.map((_, i) => deckExtra(doc, i));
+    return made(`${DECK_LINK_VERSION}.${b64urlEncode(utf8Encode(wrap(extras)))}`);
+  }
+  const extras = doc.pages.map(pageExtra);
+  if (extras.every((e) => e === 0) && !doc.transparentBackground) {
+    return made(`1.${b64urlEncode(utf8Encode(JSON.stringify(payload)))}`);
+  }
+  return made(`${LINK_VERSION}.${b64urlEncode(utf8Encode(wrap(extras)))}`);
+}
+
+/** The link for a Document as a string; use encodeShareLinkDetailed to learn whether a photo was dropped. */
 export function encodeShareLink(doc: Document): string {
+  return encodeShareLinkDetailed(doc).link;
+}
+
+function linkPayload(doc: Document): unknown[] {
   const colourway = getColourway(doc.colourway);
   if (!colourway) throw new Error(`Unknown colourway: ${doc.colourway}`);
   const inputsOnly = !doc.edited && doc.pages.length === 1;
@@ -136,10 +213,14 @@ export function encodeShareLink(doc: Document): string {
     );
   }
   // Guidance goes last: links made before it existed are 10 or 12 long and decode with guidance 0.
-  // A chosen family rides in the same slot as [guidance, family index], so the lengths stay the same.
+  // A chosen family rides in the same slot as [guidance, family index], so the lengths stay the same, and a
+  // Reference set as [guidance, family index, set]; links made before sets have none and draw from set 1.
   const family = doc.generator.family ?? 'auto';
-  payload.push(family === 'auto' ? doc.generator.guidance : [doc.generator.guidance, PATTERN_FAMILIES.indexOf(family)]);
-  return `${LINK_VERSION}.${b64urlEncode(utf8Encode(JSON.stringify(payload)))}`;
+  const set = doc.generator.referenceSet;
+  const g = doc.generator.guidance;
+  const f = PATTERN_FAMILIES.indexOf(family);
+  payload.push(set !== undefined ? [g, f, set] : family === 'auto' ? g : [g, f]);
+  return payload;
 }
 
 const invalid = (message: string): ShareLinkResult => ({ error: { code: 'link.invalid', message } });
@@ -154,6 +235,41 @@ function zoneFromArray(v: unknown): TextZone | undefined | null {
   return mode ? { col: v[0] as number, row: v[1] as number, w: v[2] as number, h: v[3] as number, mode } : null;
 }
 
+/** Reads a Page's layout and content from a link; null when malformed (the Document validation does the rest). */
+function pageExtraFromLink(v: unknown, deck = false): { layout?: PageLayoutId; content?: PageContent; seed?: string; edited?: boolean } | null {
+  if (v === 0) return {};
+  if (!isArr(v) || v.length !== (deck ? 4 : 2) || !isInt(v[0])) return null;
+  const layout = LAYOUT_IDS[v[0]];
+  if (!layout) return null;
+  const out: { layout?: PageLayoutId; content?: PageContent; seed?: string; edited?: boolean } = layout === 'pattern' ? {} : { layout };
+  if (deck) {
+    if (typeof v[2] !== 'string' || !v[2] || (v[3] !== 0 && v[3] !== 1)) return null;
+    out.seed = v[2];
+    out.edited = v[3] === 1;
+  }
+  const c = v[1];
+  if (c === 0) return out;
+  if (typeof c !== 'object' || c === null || isArr(c)) return null;
+  const rec = c as Record<string, unknown>;
+  const content: PageContent = {};
+  for (const [key, value] of Object.entries(rec)) {
+    if (key === 'h' || key === 's' || key === 'l') {
+      if (typeof value !== 'string') return null;
+      content[key === 'h' ? 'headline' : key === 's' ? 'secondary' : 'label'] = value;
+    } else if (key === 't') {
+      if (!isArr(value) || value.length !== 3 || (value[0] !== 0 && value[0] !== 1)) return null;
+      if (typeof value[1] !== 'string' || typeof value[2] !== 'string') return null;
+      content.ticker = { show: value[0] === 1, left: value[1], right: value[2] };
+    } else if (key === 'g') {
+      if (value !== 0 && value !== 1) return null;
+      content.logo = { show: value === 1 };
+    } else {
+      return null;
+    }
+  }
+  return { ...out, content };
+}
+
 /**
  * Decodes a share link fragment (the value after `p=`).
  * Errors: 'link.unsupportedVersion' for an unknown version tag, 'link.invalid' for anything else
@@ -165,11 +281,12 @@ export function decodeShareLink(fragment: string): ShareLinkResult {
   }
   const m = /^(\d{1,6})\.([A-Za-z0-9_-]*)$/.exec(fragment);
   if (!m) return invalid('Share link is not valid');
-  if (Number(m[1]) !== LINK_VERSION) {
+  const version = Number(m[1]);
+  if (version !== 1 && version !== LINK_VERSION && version !== DECK_LINK_VERSION) {
     return {
       error: {
         code: 'link.unsupportedVersion',
-        message: `Share link version ${m[1]} is not supported (expected ${LINK_VERSION})`,
+        message: `Share link version ${m[1]} is not supported (expected 1, ${LINK_VERSION} or ${DECK_LINK_VERSION})`,
       },
     };
   }
@@ -181,13 +298,24 @@ export function decodeShareLink(fragment: string): ShareLinkResult {
   } catch {
     p = undefined;
   }
+  let extras: unknown[] | undefined;
+  let transparentBackground = false;
+  if (version === LINK_VERSION || version === DECK_LINK_VERSION) {
+    if (!isArr(p) || (p.length !== 2 && p.length !== 3) || !isArr(p[1])) return invalid('Share link is not valid');
+    if (p.length === 3 && p[2] !== 1) return invalid('Share link is not valid');
+    transparentBackground = p.length === 3;
+    extras = p[1];
+    p = p[0];
+  }
   if (!isArr(p) || ![10, 11, 12, 13].includes(p.length)) return invalid('Share link is not valid');
   const hasGuidance = p.length === 11 || p.length === 13;
   const last = hasGuidance ? p[p.length - 1] : 0;
-  const guidance = isArr(last) && last.length === 2 ? last[0] : last;
-  const familyIndex = isArr(last) && last.length === 2 ? last[1] : 0;
+  const slot = isArr(last) && (last.length === 2 || last.length === 3);
+  const guidance = slot ? last[0] : last;
+  const familyIndex = slot ? last[1] : 0;
   const family = isInt(familyIndex) ? PATTERN_FAMILIES[familyIndex] : undefined;
-  if (!family || (isArr(last) && last.length !== 2)) return invalid('Share link is not valid');
+  const referenceSet = slot && last.length === 3 ? last[2] : undefined;
+  if (!family || (isArr(last) && !slot)) return invalid('Share link is not valid');
 
   const [fmt, den, cw, slope, blockCount, cornerMeetLimit, explicit, seed, zone, custom] = p;
   const format = isInt(fmt) ? FORMAT_IDS[fmt] : undefined;
@@ -204,7 +332,8 @@ export function decodeShareLink(fragment: string): ShareLinkResult {
   }
 
   const inputsOnly = p.length <= 11;
-  const rawPages: { pattern: Block[]; textZone?: TextZone }[] = [];
+  const rawPages: { pattern: Block[]; textZone?: TextZone; layout?: PageLayoutId; content?: PageContent; seed?: string; edited?: boolean }[] = [];
+  if (version === DECK_LINK_VERSION && inputsOnly) return invalid('Share link is not valid');
   if (inputsOnly) {
     const textZone = zoneFromArray(zone);
     if (textZone === null) return invalid('Share link is not valid');
@@ -232,22 +361,39 @@ export function decodeShareLink(fragment: string): ShareLinkResult {
     }
   }
 
+  if (extras) {
+    if (extras.length !== rawPages.length) return invalid('Share link is not valid');
+    for (let i = 0; i < rawPages.length; i++) {
+      const extra = pageExtraFromLink(extras[i], version === DECK_LINK_VERSION);
+      if (extra === null) return invalid('Share link is not valid');
+      Object.assign(rawPages[i]!, extra);
+    }
+  }
+
   const raw = {
     version: 1,
     format,
     density,
     colourway: colourway.id,
     seed,
-    generator: { slope: slopeId, blockCount, cornerMeetLimit, guidance, ...(family === 'auto' ? {} : { family }) },
+    generator: {
+      slope: slopeId,
+      blockCount,
+      cornerMeetLimit,
+      guidance,
+      ...(family === 'auto' ? {} : { family }),
+      ...(referenceSet === undefined ? {} : { referenceSet }),
+    },
     ...(explicit === 0 ? {} : { blockCountExplicit: explicit === 2 }),
     pages: rawPages,
     ...(customSize ? { customSize } : {}),
     edited: !inputsOnly && p[11] === 1,
+    ...(transparentBackground ? { transparentBackground: true } : {}),
   };
   const validated = validateDocument(raw);
   if ('error' in validated) return invalid(validated.error.message);
   const doc = validated.document;
-  if (!inputsOnly) return { document: doc };
+  if (!inputsOnly) return { document: settlePages(doc) };
 
   const textZone = doc.pages[0]?.textZone;
   const { blocks } = generatePatternDetailed(

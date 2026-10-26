@@ -20,6 +20,8 @@ export interface ReferencePattern {
   family: ReferenceFamily;
   /** Null for an accent (one corner Block has no trend); accents fit any Slope filter. */
   slope: Slope | null;
+  /** The Reference set that added it (GLOSSARY: Reference set); a set never changes once released. */
+  set: number;
 }
 
 export const REFERENCE_SIZE = 16;
@@ -144,7 +146,7 @@ export function classifyReferenceSlope(mask: readonly string[], family: Referenc
 }
 
 export const REFERENCE_PATTERNS: readonly ReferencePattern[] = REFERENCE_PATTERN_MASKS.map(
-  ({ figmaNode, source, mask, family: given }) => {
+  ({ figmaNode, source, mask, family: given, set = 1 }) => {
     // Approved references carry their family (by edges); the Figma ones are listed above.
     const family: ReferenceFamily = given ?? (ACCENT.has(figmaNode)
       ? 'accent'
@@ -153,14 +155,28 @@ export const REFERENCE_PATTERNS: readonly ReferencePattern[] = REFERENCE_PATTERN
         : HANGING.has(figmaNode)
           ? 'hanging'
           : 'rising');
-    return { figmaNode, source, mask, family, slope: classifyReferenceSlope(mask, family) };
+    return { figmaNode, source, mask, family, slope: classifyReferenceSlope(mask, family), set };
   }
 );
+
+/** The newest Reference set: new Documents and Generate use it. */
+export const LATEST_REFERENCE_SET = Math.max(...REFERENCE_PATTERNS.map((p) => p.set));
+
+/**
+ * The Reference Patterns of set `set` (every reference added up to it), in a fixed order. A Document without
+ * a set is from before sets existed: set 1. A set never changes, so a seed draws the same Pattern forever.
+ */
+export function referencePatternsFor(set: number | undefined): readonly ReferencePattern[] {
+  const n = set ?? 1;
+  return n >= LATEST_REFERENCE_SET ? REFERENCE_PATTERNS : REFERENCE_PATTERNS.filter((p) => p.set <= n);
+}
 
 export interface SimilarityFilter {
   family?: ReferenceFamily;
   /** Matches references of this Slope, plus accents (which have none). */
   slope?: Slope;
+  /** Only the references of this Reference set (see referencePatternsFor); absent: every reference. */
+  set?: number;
 }
 
 export interface SimilarityResult {
@@ -171,7 +187,7 @@ export interface SimilarityResult {
 }
 
 /** Resamples a Page to 16x16: a cell is covered when its centre lies inside a Block. */
-function resample(blocks: readonly Block[], grid: Pick<Grid, 'cols' | 'rows'>): boolean[] {
+export function patternMask(blocks: readonly Block[], grid: Pick<Grid, 'cols' | 'rows'>): boolean[] {
   const n = REFERENCE_SIZE;
   const out = new Array<boolean>(n * n).fill(false);
   // Each Block marks the sample centres it contains: x in [col, col + w) <=> c in [lo, hi).
@@ -185,6 +201,17 @@ function resample(blocks: readonly Block[], grid: Pick<Grid, 'cols' | 'rows'>): 
     for (let r = r0; r < r1; r++) for (let c = c0; c < c1; c++) out[r * n + c] = true;
   }
   return out;
+}
+
+/** Intersection-over-union of two `patternMask` samples; two empty Pages count as identical. */
+export function maskOverlap(a: readonly boolean[], b: readonly boolean[]): number {
+  let inter = 0;
+  let union = 0;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] && b[i]) inter++;
+    if (a[i] || b[i]) union++;
+  }
+  return union === 0 ? 1 : inter / union;
 }
 
 /** Each reference's '#' cells as indices into the 16x16 sample, built once. */
@@ -209,10 +236,10 @@ export function patternSimilarity(
   grid: Pick<Grid, 'cols' | 'rows'>,
   filter: SimilarityFilter = {}
 ): SimilarityResult {
-  const cells = resample(blocks, grid);
+  const cells = patternMask(blocks, grid);
   const covered = cells.filter(Boolean).length;
   let best: SimilarityResult = { iou: 0, match: null };
-  for (const ref of REFERENCE_PATTERNS) {
+  for (const ref of filter.set === undefined ? REFERENCE_PATTERNS : referencePatternsFor(filter.set)) {
     if (filter.family && ref.family !== filter.family) continue;
     if (filter.slope && ref.slope !== null && ref.slope !== filter.slope) continue;
     const own = refCells(ref);
