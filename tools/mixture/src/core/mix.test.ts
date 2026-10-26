@@ -143,29 +143,23 @@ describe('buildMix', () => {
 
   const short = (cells: (string | null)[][]) => cells.map((row) => row.map((key) => key![0]!.toUpperCase()).join(''))
 
-  it.each([
-    [4, ['PPGG', 'PPGG', 'PPGY', 'PPYY']],
-    [8, ['PPPPGGGG', 'PPPPGGGG', 'PPPPGGGG', 'PPPPGGGG', 'PPPPGGGG', 'PPPPYYYY', 'PPPPYYYY', 'PPPPYYYY']],
-  ] as const)(
-    'gives an ordered Mix colour with 50–75% of the value just the left Side, and splits the right Side between the rest (size %i)',
-    (size, rows) => {
-      // Purple 59% fills the left Side; green and yellow split the right Side 25:16.
-      const slices = [
-        { value: 59, colour: purple },
-        { value: 25, colour: green },
-        { value: 16, colour: yellow },
-      ]
-      expect(short(buildMix(slices, size, { layout: 'ordered', seed: 'a' }).cells)).toEqual(rows)
-    },
-  )
-
-  it('spills an ordered Mix colour past 75% from the left Side onto the top of the right', () => {
-    // Purple 80% of 16 cells is 12.8: the left Side, then the top of the right Side.
+  it('gives an 8×8 ordered Mix colour with 50–75% of the value just the left Side, and splits the right Side between the rest', () => {
+    // Purple 59% fills the left Side; green and yellow split the right Side 25:16.
     const slices = [
-      { value: 80, colour: purple },
-      { value: 20, colour: green },
+      { value: 59, colour: purple },
+      { value: 25, colour: green },
+      { value: 16, colour: yellow },
     ]
-    expect(short(buildMix(slices, 4, { layout: 'ordered', seed: 'a' }).cells)).toEqual(['PPPP', 'PPPP', 'PPPG', 'PPGG'])
+    expect(short(buildMix(slices, 8, { layout: 'ordered', seed: 'a' }).cells)).toEqual([
+      'PPPPGGGG',
+      'PPPPGGGG',
+      'PPPPGGGG',
+      'PPPPGGGG',
+      'PPPPGGGG',
+      'PPPPYYYY',
+      'PPPPYYYY',
+      'PPPPYYYY',
+    ])
   })
 
   it.each([4, 8] as const)('keeps every Plan colour but the largest in one Side of an ordered Mix (size %i)', (size) => {
@@ -184,18 +178,21 @@ describe('buildMix', () => {
     }
   })
 
-  // Values are cell counts out of 16, written as family initials; the first listed wins a tie.
+  // Values are percentages, written after family initials; the first listed wins a tie.
   it.each([
-    ['puts the largest colour at the top of the left Side and the rest on the right first', 'N6 O4 B4 Y2', ['NNOO', 'NNOO', 'NNBB', 'YYBB']],
-    ['turns back at the end of each row', 'B6 N5 O3 Y2', ['BBNN', 'BBNN', 'BBNO', 'YYOO']],
-    ['spans nothing when the two largest colours tie', 'B5 N5 Y3 O3', ['BBNN', 'BBNN', 'BONY', 'OOYY']],
-    ['spills the largest colour onto the top of the right Side', 'B7 N3 O3 Y3', ['BBBB', 'BBNN', 'BYNO', 'YYOO']],
-    ['spills a single cell of the largest colour when nothing else fits', 'B7 N7 Y2', ['BBBN', 'BBNN', 'BBNN', 'YYNN']],
-    ['puts a smaller colour on the right when a larger one no longer fits there', 'B6 N5 G4 Y1', ['BBBB', 'BBNN', 'GGNN', 'GGYN']],
-  ] as const)('%s in an ordered Mix (%s)', (_, spec, rows) => {
+    ['lands exactly on a case', 'B25 N25 O25 Y25', 14, ['BBOO', 'BBOO', 'NNYY', 'NNYY']],
+    ['snaps each colour to the nearest piece', 'B40 N30 O20 Y10', 13, ['BBNN', 'BBNN', 'BBOO', 'YYOO']],
+    ['keeps equal values as equal pieces', 'B31.25 N31.25 Y18.75 O18.75', 12, ['BBNN', 'BBNN', 'BBNN', 'YYOO']],
+    ['gives a Dominant Plan colour exactly the left Side', 'B59 G25 Y16', 8, ['BBGG', 'BBGG', 'BBYY', 'BBYY']],
+    ['holds a Dominant Plan colour to the left Side even near 75%', 'B70 N30', 4, ['BBNN', 'BBNN', 'BBNN', 'BBNN']],
+    ['spans the largest colour onto the top of the right Side from 75%', 'B80 G20', 3, ['BBBB', 'BBBB', 'BBGG', 'BBGG']],
+    ['gives a tiny Plan colour a single cell', 'B97 N2 Y1', 5, ['BBBB', 'BBBB', 'BBBB', 'BBNY']],
+  ] as const)('%s in a 4×4 ordered Mix (%s)', (_, spec, mixCase, rows) => {
     const families = { B: 'blue', N: 'navy', O: 'orange', Y: 'yellow', G: 'green' } as const
     const slices = spec.split(' ').map((s) => ({ value: Number(s.slice(1)), colour: { family: families[s[0] as keyof typeof families], tint: 100 as const } }))
-    expect(short(buildMix(slices, 4, { layout: 'ordered', seed: 'a' }).cells)).toEqual(rows)
+    const mix = buildMix(slices, 4, { layout: 'ordered', seed: 'a' })
+    expect(short(mix.cells)).toEqual(rows)
+    expect(mix.mixCase).toBe(mixCase)
   })
 
   it('leaves every cell empty when the Plans have no value', () => {

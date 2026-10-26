@@ -85,19 +85,16 @@ export interface MixExample {
   shares: [ColourFamily, number][]
 }
 
-/** Portfolios that show how an Ordered Mix places its colours in the two Sides. */
+/** Portfolios that show how a 4×4 Ordered Mix snaps Plan values to the nearest Mix case. */
 export const MIX_EXAMPLES: MixExample[] = [
-  { name: 'Right Side first', size: 4, shares: [['navy', 37.5], ['orange', 25], ['blue', 25], ['yellow', 12.5]] },
-  { name: 'Turning rows', size: 4, shares: [['blue', 37.5], ['navy', 31.25], ['orange', 18.75], ['yellow', 12.5]] },
-  { name: 'Tie', size: 4, shares: [['blue', 31.25], ['navy', 31.25], ['yellow', 18.75], ['orange', 18.75]] },
   { name: 'Four equal', size: 4, shares: [['blue', 25], ['navy', 25], ['orange', 25], ['yellow', 25]] },
-  { name: 'Spill', size: 4, shares: [['blue', 43.75], ['navy', 18.75], ['orange', 18.75], ['yellow', 18.75]] },
-  { name: 'One-cell spill', size: 4, shares: [['blue', 43.75], ['navy', 43.75], ['yellow', 12.5]] },
-  { name: 'Skip ahead', size: 4, shares: [['blue', 37.5], ['navy', 31.25], ['green', 25], ['yellow', 6.25]] },
-  { name: 'Exactly 50%', size: 4, shares: [['blue', 50], ['navy', 31.25], ['orange', 12.5], ['yellow', 6.25]] },
-  { name: 'Past 75%', size: 4, shares: [['blue', 81.25], ['navy', 12.5], ['orange', 6.25]] },
-  { name: 'Five colours', size: 8, shares: [['blue', 46.875], ['navy', 21.875], ['purple', 15.625], ['yellow', 9.375], ['orange', 6.25]] },
-  { name: 'Tie, five colours', size: 8, shares: [['blue', 31.25], ['navy', 31.25], ['purple', 18.75], ['yellow', 12.5], ['orange', 6.25]] },
+  { name: 'Nearest pieces', size: 4, shares: [['blue', 40], ['navy', 30], ['orange', 20], ['yellow', 10]] },
+  { name: 'Tie', size: 4, shares: [['blue', 31.25], ['navy', 31.25], ['yellow', 18.75], ['orange', 18.75]] },
+  { name: 'Dominant', size: 4, shares: [['blue', 59], ['green', 25], ['yellow', 16]] },
+  { name: 'Near 75%', size: 4, shares: [['blue', 70], ['navy', 30]] },
+  { name: 'Past 75%', size: 4, shares: [['blue', 80], ['green', 20]] },
+  { name: 'Tiny Plans', size: 4, shares: [['blue', 97], ['navy', 2], ['yellow', 1]] },
+  { name: 'Eight colours', size: 4, shares: [['blue', 30], ['navy', 20], ['purple', 15], ['orange', 10], ['yellow', 10], ['green', 6], ['red', 5], ['indigo', 4]] },
 ]
 
 /** One Plan per share of a Mix example, worth that many thousand baht. */

@@ -69,3 +69,28 @@ export function* partitions(total: number, max: number): Generator<number[]> {
     for (const rest of partitions(total - size, size)) yield [size, ...rest]
   }
 }
+
+const ALL_CASES = mixCases(SIZE * SIZE)
+
+/**
+ * The Mix case closest to `values`, ranked largest first: one with as many colours, the largest
+ * held to the Dominant Plan colour rule (exactly the left Side from 50% to 75%, no more than a Side
+ * below 75%), equal values kept as equal pieces, then the least squared gap between each colour's
+ * cells and its share of 16. Returns the case and its number on the Mix cases page.
+ */
+export function nearestMixCase(values: number[]): { mixCase: MixCase; number: number } {
+  const total = values.reduce((a, b) => a + b, 0)
+  const exact = values.map((v) => (v / total) * SIZE * SIZE)
+  const top = values[0]! / total
+  const fits = (sizes: number[]) => (top > 0.5 && top < 0.75 ? sizes[0] === PER_SIDE : top < 0.75 ? sizes[0]! <= PER_SIDE : true)
+  const keepsTies = (sizes: number[]) => sizes.every((s, i) => i === 0 || values[i] !== values[i - 1] || s === sizes[i - 1])
+  const same = ALL_CASES.filter((c) => c.sizes.length === values.length)
+  // A rule no case can meet (a Dominant Plan colour among ten or more colours) is dropped.
+  const narrowed = [fits, keepsTies].reduce((cases, rule) => {
+    const kept = cases.filter((c) => rule(c.sizes))
+    return kept.length ? kept : cases
+  }, same)
+  const gap = (c: MixCase) => c.sizes.reduce((a, s, i) => a + (s - exact[i]!) ** 2, 0)
+  const best = narrowed.reduce((a, b) => (gap(b) < gap(a) ? b : a))
+  return { mixCase: best, number: ALL_CASES.indexOf(best) + 1 }
+}

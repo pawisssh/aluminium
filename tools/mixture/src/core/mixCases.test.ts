@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { layoutCase, mixCases, partitions } from './mixCases'
+import { layoutCase, mixCases, nearestMixCase, partitions } from './mixCases'
 
 /** Each colour's bounding box as [width, rows], with whether it fills the box and stays in one Side. */
 function pieces(cells: number[][]) {
@@ -74,5 +74,12 @@ describe('mixCases', () => {
 
   it('places every set of pieces that can be split into the two Sides', () => {
     for (const sizes of partitions(16, 8)) expect(layoutCase(sizes) !== null).toBe(splitsIntoSides(sizes))
+  })
+})
+
+describe('nearestMixCase', () => {
+  it('keeps the colour count when no case can give a Dominant Plan colour exactly the left Side', () => {
+    const { mixCase } = nearestMixCase([55, 5, 5, 5, 5, 5, 5, 5, 5, 5])
+    expect(mixCase.sizes).toHaveLength(10)
   })
 })

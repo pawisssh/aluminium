@@ -1,5 +1,6 @@
 import { createRng } from '@/vendor/fnm-core/prng'
 import { colourKey, type PlanColour } from './colours'
+import { nearestMixCase } from './mixCases'
 
 export type MixSize = 4 | 8
 export type MixLayout = 'random' | 'ordered'
@@ -14,16 +15,30 @@ export interface Mix {
   cells: (string | null)[][]
   /** Plan colours left out because there were more colours than cells. */
   hiddenColours: number
+  /** The Mix case a 4×4 ordered Mix is drawn from, numbered as on the Mix cases page. */
+  mixCase?: number
 }
 
 const RANDOM_ATTEMPTS = 50
 
 export function buildMix(slices: MixSlice[], size: MixSize, options: { layout: MixLayout; seed: string }): Mix {
-  const { shares, hidden } = allocate(slices, size * size, options.layout)
+  const ranked = rank(slices)
+  if (options.layout === 'ordered' && size === 4 && ranked.length) return caseMix(ranked)
+  const { shares, hidden } = allocate(ranked, size * size, options.layout)
   const rng = createRng(options.seed)
   let cells: (string | null)[][] | null = null
   for (let i = 0; options.layout === 'random' && !cells && i < RANDOM_ATTEMPTS; i++) cells = growRegions(shares, size, rng)
   return { cells: cells ?? orderedLayout(shares, size), hiddenColours: hidden }
+}
+
+/**
+ * Draws a 4×4 ordered Mix from the Mix case nearest the Plan values, so every Plan colour is one
+ * 1×1 to 2×4 piece. Past 16 colours only the largest are shown.
+ */
+function caseMix(ranked: [string, number][]): Mix {
+  const kept = ranked.slice(0, 16)
+  const { mixCase, number } = nearestMixCase(kept.map(([, value]) => value))
+  return { cells: mixCase.cells.map((row) => row.map((i) => kept[i]![0])), hiddenColours: ranked.length - kept.length, mixCase: number }
 }
 
 /**
@@ -140,16 +155,11 @@ interface Share {
 }
 
 /**
- * Splits `total` cells between Plan colours by value, largest colour first. In an ordered Mix a
+ * Splits `total` cells between Plan colours by value, largest colour first. In an 8×8 ordered Mix a
  * Dominant Plan colour (more than half the value, less than three quarters) takes exactly the left
  * Side, and the other colours split the right Side.
  */
-function allocate(slices: MixSlice[], total: number, layout: MixLayout): { shares: Share[]; hidden: number } {
-  const byKey = new Map<string, number>()
-  for (const s of slices) {
-    if (s.value > 0) byKey.set(colourKey(s.colour), (byKey.get(colourKey(s.colour)) ?? 0) + s.value)
-  }
-  const ranked = [...byKey].sort((a, b) => b[1] - a[1])
+function allocate(ranked: [string, number][], total: number, layout: MixLayout): { shares: Share[]; hidden: number } {
   const [top] = ranked
   const topShare = top ? top[1] / ranked.reduce((a, [, value]) => a + value, 0) : 0
   if (layout === 'ordered' && topShare > 0.5 && topShare < 0.75) {
@@ -157,6 +167,15 @@ function allocate(slices: MixSlice[], total: number, layout: MixLayout): { share
     return { shares: [{ key: top![0], cells: total / 2 }, ...rest.shares], hidden: rest.hidden }
   }
   return split(ranked, total)
+}
+
+/** Each Plan colour's total value, largest first; the first listed wins a tie. */
+function rank(slices: MixSlice[]): [string, number][] {
+  const byKey = new Map<string, number>()
+  for (const s of slices) {
+    if (s.value > 0) byKey.set(colourKey(s.colour), (byKey.get(colourKey(s.colour)) ?? 0) + s.value)
+  }
+  return [...byKey].sort((a, b) => b[1] - a[1])
 }
 
 /** Largest-remainder split of `total` cells between colours ranked largest first. */
