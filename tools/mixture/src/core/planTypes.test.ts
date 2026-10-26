@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { colourKey } from './colours'
-import { defaultPlanTypes, drawPlanTypes } from './planTypes'
+import { defaultPlanTypes, drawPlanTypes, planTypesJson } from './planTypes'
+import RAW from './planTypes.json?raw'
 
 describe('defaultPlanTypes', () => {
   it('gives every Plan type its own id and Brick seed', () => {
@@ -14,6 +15,12 @@ describe('defaultPlanTypes', () => {
     const allWeather = defaultPlanTypes().find((t) => t.id === 'astotz-all-weather')!
     expect(allWeather.brick).toEqual({ family: 'hanging', slope: 'flat', seed: 'astotz-all-weather-143', guidance: 0, blockCount: 3 })
     expect(allWeather.inDraws).toBe(true)
+  })
+})
+
+describe('planTypesJson', () => {
+  it('writes the Plan types back exactly as planTypes.json holds them', () => {
+    expect(planTypesJson(defaultPlanTypes())).toBe(RAW)
   })
 })
 

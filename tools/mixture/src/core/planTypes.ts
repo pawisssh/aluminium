@@ -25,6 +25,20 @@ export function defaultPlanTypes(): PlanType[] {
   }))
 }
 
+/** Plan types written out as `planTypes.json` is: one line each, so a saved set diffs cleanly. */
+export function planTypesJson(types: PlanType[]): string {
+  const fields = (entries: [string, unknown][]) =>
+    entries
+      .filter(([, v]) => v !== undefined)
+      .map(([k, v]) => `${JSON.stringify(k)}: ${JSON.stringify(v)}`)
+      .join(', ')
+  const lines = types.map(({ id, name, colour, brick: b, inDraws }) => {
+    const brick = fields([['family', b.family], ['slope', b.slope], ['seed', b.seed], ['guidance', b.guidance], ['blockCount', b.blockCount], ['cornerMeetLimit', b.cornerMeetLimit]])
+    return `  { ${fields([['id', id], ['name', name], ['family', colour.family], ['tint', colour.tint]])}, "brick": { ${brick} }, "inDraws": ${inDraws} }`
+  })
+  return `[\n${lines.join(',\n')}\n]\n`
+}
+
 /**
  * Picks `count` Plan types from those in draws, each one not picked yet. It prefers a type whose
  * colour family isn't in `taken` or already picked, then one whose Plan colour isn't, so the Mix

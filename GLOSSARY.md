@@ -20,6 +20,10 @@ _Avoid_: Port, group, bucket
 A Plan type's icon: a single-colour Pattern-Builder Pattern on the Brick grid, so it is one piece joined by edges or corners and has a Brick family and a Slope.
 _Avoid_: Block (one rectangle inside a Pattern, in the Pattern Builder), icon, pixel art
 
+**Plan Cover**:
+A Plan type's artwork on the plan picker (the Plan Select Figma file), read off its rectangles onto 16×16 cells. A Brick is matched to it by how much the two overlap, with the Brick scaled up to 16×16.
+_Avoid_: thumbnail, artwork (on its own)
+
 **Brick grid**:
 The cells every Brick is drawn on: 4×4 by default, or 8×8, 16×16 or a portrait grid (4×6, 8×12) to see how Bricks read at other sizes. One setting for all Bricks.
 _Avoid_: Brick size, canvas

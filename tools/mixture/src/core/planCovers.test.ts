@@ -1,0 +1,41 @@
+import { describe, expect, it } from 'vitest'
+import { generateBrick } from './brick'
+import { defaultPlanTypes } from './planTypes'
+import { closestBricks, coverMatch, planCover } from './planCovers'
+
+const grid4 = { cols: 4, rows: 4 }
+
+describe('planCover', () => {
+  it('has a 16×16 Plan Cover for each Plan type on the plan picker, and none for the rest', () => {
+    const covered = defaultPlanTypes().filter((t) => planCover(t.id))
+    expect(covered).toHaveLength(28)
+    for (const t of covered) expect(planCover(t.id)!.map((row) => row.length)).toEqual(Array(16).fill(16))
+    expect(planCover('thai-stocks')).toBeUndefined()
+  })
+})
+
+describe('coverMatch', () => {
+  const left = Array.from({ length: 16 }, () => Array.from({ length: 16 }, (_, c) => c < 8))
+
+  it('scales the Brick up to 16×16 and scores overlap over union', () => {
+    expect(coverMatch([[true, false], [true, false]], left)).toBe(1)
+    expect(coverMatch([[true, true], [true, true]], left)).toBe(0.5)
+    expect(coverMatch([[false, true], [false, true]], left)).toBe(0)
+  })
+
+  it('gives no score on a Brick grid that does not divide 16', () => {
+    expect(coverMatch(Array(6).fill([true, true, true, true]), left)).toBeNull()
+  })
+})
+
+describe('closestBricks', () => {
+  it('finds Bricks, best first, each drawn differently and scored as coverMatch scores it', () => {
+    const cover = planCover('diy')!
+    const found = closestBricks(cover, grid4, 'diy', { tries: 20, count: 5 })
+    expect(found).toHaveLength(5)
+    expect(found.map((f) => f.match)).toEqual([...found.map((f) => f.match)].sort((a, b) => b - a))
+    const masks = found.map((f) => JSON.stringify(generateBrick(f.brick, grid4)))
+    expect(new Set(masks).size).toBe(5)
+    for (const f of found) expect(coverMatch(generateBrick(f.brick, grid4), cover)).toBe(f.match)
+  })
+})
