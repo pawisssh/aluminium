@@ -195,6 +195,16 @@ describe('buildMix', () => {
     expect(mix.mixCase).toBe(mixCase)
   })
 
+  it('leaves out the smallest Plan colours past the 11 a 4×4 ordered Mix case holds', () => {
+    const families = ['yellow', 'green', 'blue', 'purple', 'navy', 'light-grey'] as const
+    const slices = families.flatMap((family, f) => ([100, 75] as const).map((tint, t) => ({ value: 100 - f * 2 - t, colour: { family, tint } })))
+    const mix = buildMix(slices, 4, { layout: 'ordered', seed: 'a' })
+    expect(new Set(mix.cells.flat()).size).toBe(11)
+    expect(mix.cells.flat()).not.toContain('light-grey-75')
+    expect(mix.hiddenColours).toBe(1)
+    expect(mix.mixCase).toBeLessThanOrEqual(52)
+  })
+
   it('leaves every cell empty when the Plans have no value', () => {
     const mix = buildMix([{ value: 0, colour: purple }], 4, { layout: 'random', seed: 'a' })
     expect(mix.cells.flat()).toEqual(Array(16).fill(null))

@@ -1,11 +1,23 @@
+import { COLOUR_FAMILIES, colourKey, type ColourFamily, type PlanColour } from './colours'
+
 /** Cells in each piece a Mix case may use: 2×4, 2×3, 2×2, 2×1 (a Side's width by its rows) and 1×1. */
 export const PIECE_SIZES = [8, 6, 4, 2, 1] as const
 
 const SIZE = 4
 const SIDE_WIDTH = SIZE / 2
 const PER_SIDE = SIDE_WIDTH * SIZE
+const CELLS = SIZE * SIZE
+
+/** The Plan colours Mix cases are drawn in: every family at Tint 100, then Green and Red at 150. */
+export const MIX_CASE_COLOURS: PlanColour[] = [
+  ...(Object.keys(COLOUR_FAMILIES) as ColourFamily[]).map((family) => ({ family, tint: 100 as const })),
+  { family: 'green', tint: 150 },
+  { family: 'red', tint: 150 },
+]
 
 export interface MixCase {
+  /** Where it comes in `mixCases`, from 1: fewest colours first, then larger pieces first. */
+  number: number
   /** Cells per Plan colour, largest first. */
   sizes: number[]
   /** Rows of indexes into `sizes`, row 0 at the top. */
@@ -20,7 +32,7 @@ const SPANNING_SIZES = [16, 14, 12] as const
 
 /** Every 4×4 Mix case with up to `maxColours` Plan colours, fewest colours first. */
 export function mixCases(maxColours: number): MixCase[] {
-  const cases: MixCase[] = []
+  const cases: Omit<MixCase, 'number'>[] = []
   for (const largest of [...SPANNING_SIZES, ...PIECE_SIZES]) {
     for (const rest of partitions(SIZE * SIZE - largest, Math.min(largest, PER_SIDE))) {
       const sizes = [largest, ...rest]
@@ -29,7 +41,7 @@ export function mixCases(maxColours: number): MixCase[] {
     }
   }
   // A stable sort keeps the larger pieces first among cases with as many colours.
-  return cases.sort((a, b) => a.sizes.length - b.sizes.length)
+  return cases.sort((a, b) => a.sizes.length - b.sizes.length).map((c, i) => ({ ...c, number: i + 1 }))
 }
 
 /**
@@ -70,29 +82,35 @@ export function* partitions(total: number, max: number): Generator<number[]> {
   }
 }
 
-const ALL_CASES = mixCases(SIZE * SIZE)
+/** Every Mix case there are Mix case colours for, as numbered on the Mix cases page. */
+export const MIX_CASES = mixCases(MIX_CASE_COLOURS.length)
+
+/** A piece's share of the Mix, such as "37.5%". */
+export const pieceShare = (cells: number) => `${(cells / CELLS) * 100}%`
+
+/** A Mix case's cells as colour keys, its nth colour drawn in the nth Mix case colour. */
+export const caseColourKeys = (mixCase: MixCase) => mixCase.cells.map((row) => row.map((i) => colourKey(MIX_CASE_COLOURS[i]!)))
 
 /**
- * The Mix case closest to `values`, ranked largest first: one with as many colours, the largest
- * held to the Dominant Plan colour rule (exactly the left Side from 50% to 75%, no more than a Side
- * below 75%), equal values kept as equal pieces, then the least squared gap between each colour's
- * cells and its share of 16. Returns the case and its number on the Mix cases page.
+ * The Mix case closest to `values` (at most one per Mix case colour), ranked largest first: one
+ * with as many colours, the largest held to the Dominant Plan colour rule (exactly the left Side
+ * from 50% to 75%, no more than a Side below 75%), equal values kept as equal pieces, then the
+ * least squared gap between each colour's cells and its share of 16.
  */
-export function nearestMixCase(values: number[]): { mixCase: MixCase; number: number } {
+export function nearestMixCase(values: number[]): MixCase {
   const total = values.reduce((a, b) => a + b, 0)
-  const exact = values.map((v) => (v / total) * SIZE * SIZE)
+  const exact = values.map((v) => (v / total) * CELLS)
   const top = values[0]! / total
   const fits = (sizes: number[]) => (top > 0.5 && top < 0.75 ? sizes[0] === PER_SIDE : top < 0.75 ? sizes[0]! <= PER_SIDE : true)
   const keepsTies = (sizes: number[]) => sizes.every((s, i) => i === 0 || values[i] !== values[i - 1] || s === sizes[i - 1])
-  const same = ALL_CASES.filter((c) => c.sizes.length === values.length)
-  // A rule no case can meet (a Dominant Plan colour among ten or more colours) is dropped.
+  const same = MIX_CASES.filter((c) => c.sizes.length === values.length)
+  // A rule no case can meet (a Dominant Plan colour among ten or more colours, or nine equal values) is dropped.
   const narrowed = [fits, keepsTies].reduce((cases, rule) => {
     const kept = cases.filter((c) => rule(c.sizes))
     return kept.length ? kept : cases
   }, same)
   const gap = (c: MixCase) => c.sizes.reduce((a, s, i) => a + (s - exact[i]!) ** 2, 0)
-  const best = narrowed.reduce((a, b) => (gap(b) < gap(a) ? b : a))
-  return { mixCase: best, number: ALL_CASES.indexOf(best) + 1 }
+  return narrowed.reduce((a, b) => (gap(b) < gap(a) ? b : a))
 }
 
 const CASE_VALUE_ATTEMPTS = 200
@@ -103,12 +121,11 @@ const CASE_VALUE_ATTEMPTS = 200
  * another case are tried again; past every attempt, the case's exact shares.
  */
 export function caseValues(mixCase: MixCase, rng: () => number): number[] {
-  const sameCase = (values: number[]) => nearestMixCase(values).mixCase.sizes.join() === mixCase.sizes.join()
   for (let attempt = 0; attempt < CASE_VALUE_ATTEMPTS; attempt++) {
     const drawn = mixCase.sizes.map((size) => size * (0.6 + 0.8 * rng()))
     const total = drawn.reduce((a, b) => a + b, 0)
     const values = drawn.map((v) => Math.round((v / total) * 10000) / 100).sort((a, b) => b - a)
-    if (sameCase(values)) return values
+    if (nearestMixCase(values).number === mixCase.number) return values
   }
-  return mixCase.sizes.map((size) => (size / (SIZE * SIZE)) * 100)
+  return mixCase.sizes.map((size) => (size / CELLS) * 100)
 }

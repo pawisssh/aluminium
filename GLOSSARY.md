@@ -37,7 +37,7 @@ The Mix layout that grows each Plan colour, largest first, from a random cell in
 _Avoid_: Scatter
 
 **Ordered layout**:
-The Mix layout that places Plan colours largest first, the same way every time, in two Sides. Every colour but the largest sits whole in one Side, so the largest is the only one that can span both, and each colour is one edge-joined piece. A 4×4 Ordered layout counts its Plan colours, then draws the Mix case with as many colours that sits nearest their values.
+The Mix layout that places Plan colours largest first, the same way every time, in two Sides. Every colour but the largest sits whole in one Side, so the largest is the only one that can span both, and each colour is one edge-joined piece. A 4×4 Ordered layout counts its Plan colours (up to 11; any smaller ones are left out), then draws the Mix case with as many colours that sits nearest their values, keeping equal values as equal pieces where such a case exists.
 _Avoid_: Snake
 
 **Side**:
@@ -49,7 +49,7 @@ One way a 4×4 Mix can be cut up when every Plan colour is a single 1×1, 2×1, 
 _Avoid_: scenario, permutation
 
 **Dominant Plan colour**:
-In an Ordered layout, a Plan colour with more than 50% but less than 75% of the Portfolio's value. It takes exactly the left Side, and the other colours split the right Side by value. From 75% up, a colour takes its true share (in a 4×4 Mix, the nearest Mix case piece).
+In an Ordered layout, a Plan colour with more than 50% but less than 75% of the Portfolio's value. It takes exactly the left Side, and the other colours split the right Side by value. From 75% up, a colour takes its true share (in a 4×4 Mix, the nearest Mix case piece). With ten or more Plan colours no Mix case has room for a whole left Side, so a 4×4 Mix draws the nearest case without it.
 _Avoid_: Majority, main colour
 
 **Plan colour**:

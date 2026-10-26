@@ -1,6 +1,6 @@
 import { createRng } from '@/vendor/fnm-core/prng'
 import { colourKey, type PlanColour } from './colours'
-import { nearestMixCase } from './mixCases'
+import { MIX_CASE_COLOURS, nearestMixCase } from './mixCases'
 
 export type MixSize = 4 | 8
 export type MixLayout = 'random' | 'ordered'
@@ -15,7 +15,7 @@ export interface Mix {
   cells: (string | null)[][]
   /** Plan colours left out because there were more colours than cells. */
   hiddenColours: number
-  /** The Mix case a 4×4 ordered Mix is drawn from, numbered as on the Mix cases page. */
+  /** The number of the Mix case a 4×4 ordered Mix is drawn from, as on the Mix cases page. */
   mixCase?: number
 }
 
@@ -33,12 +33,12 @@ export function buildMix(slices: MixSlice[], size: MixSize, options: { layout: M
 
 /**
  * Draws a 4×4 ordered Mix from the Mix case nearest the Plan values, so every Plan colour is one
- * 1×1 to 2×4 piece. Past 16 colours only the largest are shown.
+ * 1×1 to 2×4 piece. Past one Plan colour per Mix case colour, only the largest are shown.
  */
 function caseMix(ranked: [string, number][]): Mix {
-  const kept = ranked.slice(0, 16)
-  const { mixCase, number } = nearestMixCase(kept.map(([, value]) => value))
-  return { cells: mixCase.cells.map((row) => row.map((i) => kept[i]![0])), hiddenColours: ranked.length - kept.length, mixCase: number }
+  const kept = ranked.slice(0, MIX_CASE_COLOURS.length)
+  const mixCase = nearestMixCase(kept.map(([, value]) => value))
+  return { cells: mixCase.cells.map((row) => row.map((i) => kept[i]![0])), hiddenColours: ranked.length - kept.length, mixCase: mixCase.number }
 }
 
 /**

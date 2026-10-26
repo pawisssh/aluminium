@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createRng } from '@/vendor/fnm-core/prng'
-import { caseValues, layoutCase, mixCases, nearestMixCase, partitions } from './mixCases'
+import { caseValues, layoutCase, MIX_CASES, mixCases, nearestMixCase, partitions } from './mixCases'
 
 /** Each colour's bounding box as [width, rows], with whether it fills the box and stays in one Side. */
 function pieces(cells: number[][]) {
@@ -26,7 +26,7 @@ function splitsIntoSides(sizes: number[]): boolean {
 }
 
 describe('mixCases', () => {
-  const cases = mixCases(11)
+  const cases = MIX_CASES
 
   it('counts 52 cases with up to 11 Plan colours', () => {
     const byColours: Record<number, number> = {}
@@ -34,6 +34,11 @@ describe('mixCases', () => {
     expect(cases).toHaveLength(52)
     expect(byColours).toEqual({ 1: 1, 2: 3, 3: 4, 4: 6, 5: 7, 6: 7, 7: 6, 8: 6, 9: 5, 10: 4, 11: 3 })
     expect(cases.filter((c) => c.sizes.length === 2).map((c) => c.sizes)).toEqual([[14, 2], [12, 4], [8, 8]])
+    expect(cases.map((c) => c.number)).toEqual(cases.map((_, i) => i + 1))
+  })
+
+  it('numbers cases the same however many colours it lists', () => {
+    expect(mixCases(16).slice(0, cases.length)).toEqual(cases)
   })
 
   it('cuts every case into the allowed pieces, each whole in one Side but a spanning largest', () => {
@@ -80,25 +85,24 @@ describe('mixCases', () => {
 
 describe('nearestMixCase', () => {
   it('keeps the colour count when no case can give a Dominant Plan colour exactly the left Side', () => {
-    const { mixCase } = nearestMixCase([55, 5, 5, 5, 5, 5, 5, 5, 5, 5])
-    expect(mixCase.sizes).toHaveLength(10)
+    expect(nearestMixCase([55, 5, 5, 5, 5, 5, 5, 5, 5, 5]).sizes).toHaveLength(10)
   })
 })
 
 describe('caseValues', () => {
   it('draws values, largest first and adding up to 100, that snap back to the case', () => {
-    for (const [n, c] of mixCases(11).entries()) {
+    for (const [n, c] of MIX_CASES.entries()) {
       for (const seed of ['a', 'b', 'c', 'd', 'e']) {
         const values = caseValues(c, createRng(`${seed}${n}`))
         expect(values).toEqual([...values].sort((a, b) => b - a))
         expect(values.reduce((a, b) => a + b, 0)).toBeCloseTo(100, 0)
-        expect(nearestMixCase(values).mixCase.sizes, `${c.sizes} from ${values}`).toEqual(c.sizes)
+        expect(nearestMixCase(values).number, `${c.sizes} from ${values}`).toBe(c.number)
       }
     }
   })
 
   it('draws different values each time', () => {
-    const [, , c] = mixCases(11)
+    const [, , c] = MIX_CASES
     const rng = createRng('x')
     expect(caseValues(c!, rng)).not.toEqual(caseValues(c!, rng))
   })

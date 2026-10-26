@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { BrickSettings } from '@/core/brick'
 import { COLOUR_FAMILIES, type ColourFamily, type PlanColour } from '@/core/colours'
 import type { MixLayout, MixSize } from '@/core/mix'
+import { MIX_CASE_COLOURS } from '@/core/mixCases'
 import { generateRandomSeed } from '@/vendor/fnm-core/prng'
 
 export interface Plan {
@@ -78,16 +79,9 @@ export function initialPlayground(): Playground {
   return { portfolios, mixSize: 4, mixLayout: 'random', selectedId: portfolios[0]!.id }
 }
 
-/** The Plan colours Mix cases are drawn in: every family at Tint 100, then Green and Red at 150. */
-export const CASE_COLOURS: PlanColour[] = [
-  ...(Object.keys(COLOUR_FAMILIES) as ColourFamily[]).map((family) => ({ family, tint: 100 as const })),
-  { family: 'green', tint: 150 },
-  { family: 'red', tint: 150 },
-]
-
-/** One Plan per value in percent, worth that many thousand baht, each in a different case colour picked at random. */
+/** One Plan per value in percent, worth that many thousand baht, each in a different Mix case colour picked at random. */
 export function casePlans(values: number[]): Plan[] {
-  const colours = [...CASE_COLOURS]
+  const colours = [...MIX_CASE_COLOURS]
   for (let i = colours.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1))
     ;[colours[i], colours[j]] = [colours[j]!, colours[i]!]

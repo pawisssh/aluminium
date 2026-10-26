@@ -11,6 +11,7 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { MixIcon } from '@/components/icons'
 import { MixCases } from '@/components/MixCases'
 import { MixCasePicker } from '@/components/MixCasePicker'
+import { MIX_CASE_COLOURS } from '@/core/mixCases'
 import { PhonePreview } from '@/components/PhonePreview'
 import { PlanEditor } from '@/components/PlanEditor'
 
@@ -173,7 +174,7 @@ function PortfolioEditor({
           <Button size="sm" variant="secondary" onClick={() => onChange({ ...portfolio, mixSeed: generateRandomSeed() })}>
             <Dices /> Shuffle Mix
           </Button>
-          <span className="text-xs text-muted-foreground">seed {portfolio.mixSeed}</span>
+          <span className="text-xs text-muted-foreground">{mix.mixCase ? `Mix case #${mix.mixCase}` : `seed ${portfolio.mixSeed}`}</span>
         </div>
         <div className="flex flex-1 flex-col gap-3">
           <div className="flex gap-2">
@@ -218,7 +219,7 @@ function PortfolioEditor({
           </table>
           {mix.hiddenColours > 0 && (
             <p className="flex items-center gap-2 text-sm text-negative">
-              <TriangleAlert className="size-4" /> {mix.hiddenColours} Plan colour{mix.hiddenColours > 1 ? 's are' : ' is'} too small to fit in {totalCells} cells and left out.
+              <TriangleAlert className="size-4" /> {mix.hiddenColours} Plan colour{mix.hiddenColours > 1 ? 's are' : ' is'} too small to fit {mix.mixCase ? `a Mix case, which holds up to ${MIX_CASE_COLOURS.length} Plan colours,` : `in ${totalCells} cells`} and left out.
             </p>
           )}
         </div>
