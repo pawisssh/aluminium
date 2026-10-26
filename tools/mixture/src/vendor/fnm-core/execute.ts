@@ -8,12 +8,21 @@ import {
   generatePatternDetailed,
   validateGeneratorParams,
 } from './generator.js';
+import { cleanContent, contentPatchProblem, mergeContent, photoProblem } from './content.js';
 import { gridFor } from './grid.js';
+import { layoutTextZone, LAYOUT_TABLE } from './layouts.js';
+import { isPageEdited, materializePages, nextPageSeed, pageSeed, settlePages } from './pages.js';
 import { createRng, generateRandomSeed } from './prng.js';
 import { checkPatternRules, repairPatternRules } from './patternRules.js';
+import { LATEST_REFERENCE_SET } from './referencePatterns.js';
 import { validateDocument } from './serialization.js';
-import type { Block, Command, Document, Grid, Page, Rejection, TextZone, Warning } from './types.js';
+import type { Block, Command, Document, Grid, Page, PageLayoutId, Rejection, TextZone, Warning } from './types.js';
 import { computeWarnings } from './warnings.js';
+
+/** The same Pages with the one at `pageIndex` marked as edited by hand. */
+function markEdited(pages: Page[], pageIndex: number): Page[] {
+  return pages.map((p, i) => (i === pageIndex ? { ...p, edited: true } : p));
+}
 
 /** Scales one Block side to the new Grid: a whole number of cells from 1 to the Grid side (ADR 0007). */
 function scaleSide(raw: number, max: number): number {
@@ -73,28 +82,32 @@ function reconnectEdges(old: readonly Block[], next: Block[], newGrid: Grid): vo
   }
 }
 
-/** Format/Density change: re-maps an edited Pattern, otherwise regenerates with the same seed. */
+/**
+ * Format/Density change, per Page: an edited Page's Pattern is re-mapped onto the new Grid, an unedited Page is
+ * regenerated from its own seed (a one-Page Document behaves exactly as it did before decks).
+ */
 function applyGridChange(doc: Document, changed: Document): { document: Document; warnings: Warning[] } {
   const next = rescaleZone(doc, withDensityDefaults(changed));
-  if (doc.edited) {
-    const oldGrid = gridFor(doc);
-    const newGrid = gridFor(next);
-    next.pages = next.pages.map((p) => {
-      let pattern = p.pattern.map((b) => remapBlock(b, oldGrid, newGrid));
-      reconnectEdges(p.pattern, pattern, newGrid);
-      // A remap that broke the Pattern rules (a Pattern that followed them before) is repaired
-      // by sliding masses, keeping every Block; if that fails too, computeWarnings warns.
-      if (checkPatternRules(p.pattern, oldGrid).ok && !checkPatternRules(pattern, newGrid).ok) {
-        const repaired = repairPatternRules(pattern, newGrid);
-        if (repaired && checkPatternRules(repaired, newGrid).ok) pattern = repaired;
-      }
-      return { ...p, pattern };
-    });
-    return { document: { ...next, edited: true }, warnings: [] };
-  }
-  const res = regenerate(next, next.seed);
-  next.pages = res.pages;
-  return { document: { ...next, edited: false }, warnings: res.warnings };
+  const oldGrid = gridFor(doc);
+  const newGrid = gridFor(next);
+  const warnings: Warning[] = [];
+  next.pages = next.pages.map((p, i) => {
+    if (!isPageEdited(doc, i)) {
+      const res = regeneratePage(next, i, pageSeed(next, i));
+      warnings.push(...res.warnings);
+      return { ...res.pages[i]!, edited: false };
+    }
+    let pattern = p.pattern.map((b) => remapBlock(b, oldGrid, newGrid));
+    reconnectEdges(p.pattern, pattern, newGrid);
+    // A remap that broke the Pattern rules (a Pattern that followed them before) is repaired
+    // by sliding masses, keeping every Block; if that fails too, computeWarnings warns.
+    if (checkPatternRules(p.pattern, oldGrid).ok && !checkPatternRules(pattern, newGrid).ok) {
+      const repaired = repairPatternRules(pattern, newGrid);
+      if (repaired && checkPatternRules(repaired, newGrid).ok) pattern = repaired;
+    }
+    return { ...p, pattern, edited: true };
+  });
+  return { document: next, warnings };
 }
 
 function generateNextBlockId(doc: Document, preferredId?: string): string {
@@ -120,38 +133,67 @@ function generateNextBlockId(doc: Document, preferredId?: string): string {
   return id;
 }
 
-const FLAT_FALLBACK: Warning = {
+const flatFallback = (pageIndex: number): Warning => ({
   code: 'textZone.flatFallback',
   message: 'No single Block could cover the Text zone, so it was kept clear instead.',
-};
+  pageIndex,
+});
 
-/** Regenerates the Pattern from `seed`, keeping page 0's Text zone; warns if 'flat' fell back to 'clear'. */
-function regenerate(doc: Document, seed: string): { pages: Page[]; warnings: Warning[] } {
-  const textZone = doc.pages[0]?.textZone;
-  const { blocks, flatFallback } = generatePatternDetailed(
+/**
+ * Regenerates one Page's Pattern from `seed` on the Document's Grid, keeping its Text zone, layout, content,
+ * seed and edited state and every other Page; warns if 'flat' fell back to 'clear'.
+ */
+function regeneratePage(doc: Document, pageIndex: number, seed: string): { pages: Page[]; warnings: Warning[] } {
+  const page = doc.pages[pageIndex]!;
+  const { blocks, flatFallback: fell } = generatePatternDetailed(
     gridFor(doc),
     getColourway(doc.colourway)!,
     createRng(seed),
     doc.generator,
-    textZone ? { textZone } : {}
+    page.textZone ? { textZone: page.textZone } : {}
   );
   return {
-    pages: [{ ...doc.pages[0], pattern: blocks }],
-    warnings: flatFallback ? [FLAT_FALLBACK] : [],
+    pages: doc.pages.map((p, i) => (i === pageIndex ? { ...p, pattern: blocks } : p)),
+    warnings: fell ? [flatFallback(pageIndex)] : [],
   };
 }
 
-/** Maps the Text zone onto a new Grid proportionally, so it stays inside the Page. */
+/** Regenerates every Page from its own seed (the generator settings changed); no Page is edited after. */
+function regenerateAll(doc: Document): { pages: Page[]; warnings: Warning[] } {
+  let cur = doc;
+  const warnings: Warning[] = [];
+  for (let i = 0; i < doc.pages.length; i++) {
+    const res = regeneratePage(cur, i, pageSeed(cur, i));
+    cur = { ...cur, pages: res.pages };
+    warnings.push(...res.warnings);
+  }
+  return { pages: cur.pages.map((p) => ({ ...p, edited: false })), warnings };
+}
+
+/**
+ * Puts the Text zones right after a Grid change. A Page with a layout takes its zone from the layout table on
+ * the new Grid (the Format's orientation may have changed); any other Page maps its zone proportionally,
+ * so it stays inside the Page.
+ */
 function rescaleZone(doc: Document, next: Document): Document {
-  const zone = doc.pages[0]?.textZone;
-  if (!zone) return next;
   const from = gridFor(doc);
   const to = gridFor(next);
-  const col = Math.min(to.cols - 1, Math.round((zone.col * to.cols) / from.cols));
-  const row = Math.min(to.rows - 1, Math.round((zone.row * to.rows) / from.rows));
-  const w = Math.min(to.cols - col, Math.max(1, Math.round((zone.w * to.cols) / from.cols)));
-  const h = Math.min(to.rows - row, Math.max(1, Math.round((zone.h * to.rows) / from.rows)));
-  return { ...next, pages: next.pages.map((p, i) => (i === 0 ? { ...p, textZone: { ...zone, col, row, w, h } } : p)) };
+  return {
+    ...next,
+    pages: next.pages.map((p) => {
+      if (p.layout) {
+        const zone = layoutTextZone(next, p.layout);
+        return zone ? { ...p, textZone: zone } : p;
+      }
+      const zone = p.textZone;
+      if (!zone) return p;
+      const col = Math.min(to.cols - 1, Math.round((zone.col * to.cols) / from.cols));
+      const row = Math.min(to.rows - 1, Math.round((zone.row * to.rows) / from.rows));
+      const w = Math.min(to.cols - col, Math.max(1, Math.round((zone.w * to.cols) / from.cols)));
+      const h = Math.min(to.rows - row, Math.max(1, Math.round((zone.h * to.rows) / from.rows)));
+      return { ...p, textZone: { ...zone, col, row, w, h } };
+    }),
+  };
 }
 
 /**
@@ -169,6 +211,45 @@ function withDensityDefaults(doc: Document): Document {
   return { ...doc, generator: fallback, blockCountExplicit: false };
 }
 
+/** Why `block` cannot sit on `doc`'s Grid in its Colourway (a whole size, inside the Grid, a Tint it has), if it cannot. */
+function blockProblem(doc: Document, block: Pick<Block, 'col' | 'row' | 'w' | 'h' | 'tint'>): Rejection | null {
+  const grid = gridFor(doc);
+  if (!isValidBlockSize(block.w, grid.cols) || !isValidBlockSize(block.h, grid.rows)) {
+    return {
+      rejected: {
+        code: 'block.sizeNotAllowed',
+        message: `Block size ${block.w}x${block.h} is not allowed. Width must be a whole number from 1 to ${grid.cols} and height from 1 to ${grid.rows}.`,
+      },
+    };
+  }
+
+  if (
+    block.col < 0 ||
+    block.row < 0 ||
+    block.col + block.w > grid.cols ||
+    block.row + block.h > grid.rows
+  ) {
+    return {
+      rejected: {
+        code: 'block.outOfGrid',
+        message: `Block position (${block.col}, ${block.row}) with size (${block.w}, ${block.h}) is outside grid (${grid.cols}x${grid.rows}).`,
+      },
+    };
+  }
+
+  const colourway = getColourway(doc.colourway);
+  const tintCount = colourway ? colourway.tints.length : 1;
+  if (!Number.isInteger(block.tint) || block.tint < 0 || block.tint >= tintCount) {
+    return {
+      rejected: {
+        code: 'block.tintOutOfRange',
+        message: `Tint index ${block.tint} is out of range for colourway ${doc.colourway} (0..${tintCount - 1}).`,
+      },
+    };
+  }
+  return null;
+}
+
 export type ExecuteResult =
   | { document: Document; warnings: Warning[] }
   | Rejection;
@@ -182,10 +263,13 @@ export function execute(
   doc: Document | null,
   cmd: Command
 ): { document: Document; warnings: Warning[] } | Rejection {
-  const res = executeCommand(doc, cmd);
+  // Commands see every Page's seed and edited state on the Page; the result is put back in its stored form
+  // (a one-Page Document keeps both on the Document, as before decks).
+  const res = executeCommand(doc ? materializePages(doc) : doc, cmd);
   if ('rejected' in res) return res;
+  const document = settlePages(res.document);
   // Advisory warnings never block: they are appended to any command-specific warnings.
-  return { document: res.document, warnings: [...computeWarnings(res.document), ...res.warnings] };
+  return { document, warnings: [...computeWarnings(document), ...res.warnings] };
 }
 
 function executeCommand(
@@ -208,8 +292,9 @@ function executeCommand(
       edited: false,
     };
 
+    const first = regeneratePage({ ...newDoc, pages: [{ pattern: [] }] }, 0, seed);
     return {
-      document: { ...newDoc, pages: regenerate(newDoc, seed).pages },
+      document: { ...newDoc, pages: first.pages },
       warnings: [],
     };
   }
@@ -234,20 +319,20 @@ function executeCommand(
       };
     }
 
+    const pageIndex = cmd.pageIndex ?? 0;
+    if (!doc.pages[pageIndex]) {
+      return { rejected: { code: 'page.unknown', message: `There is no Page at index ${pageIndex}.` } };
+    }
+    // Regenerates just this Page (a one-Page Document keeps the seed on the Document).
     const seed = cmd.seed !== undefined ? cmd.seed : generateRandomSeed();
-    const regen = regenerate(doc, seed);
-
-    const newDoc: Document = {
+    // A new roll draws from the newest Reference set; the Document keeps it, so its seeds redraw the same.
+    const seeded: Document = {
       ...doc,
-      seed,
-      pages: regen.pages,
-      edited: false,
+      generator: { ...doc.generator, referenceSet: LATEST_REFERENCE_SET },
+      pages: doc.pages.map((p, i) => (i === pageIndex ? { ...p, seed, edited: false } : p)),
     };
-
-    return {
-      document: newDoc,
-      warnings: regen.warnings,
-    };
+    const regen = regeneratePage(seeded, pageIndex, seed);
+    return { document: { ...seeded, pages: regen.pages }, warnings: regen.warnings };
   }
 
   if (cmd.type === 'setGeneratorParams') {
@@ -270,9 +355,9 @@ function executeCommand(
       ...doc,
       generator,
       ...(cmd.params.blockCount !== undefined ? { blockCountExplicit: true } : {}),
-      edited: false,
     };
-    const regen = regenerate(next, next.seed);
+    // The generator settings are the deck's: every Page is regenerated from its own seed.
+    const regen = regenerateAll(next);
     next.pages = regen.pages;
     return { document: next, warnings: regen.warnings };
   }
@@ -315,6 +400,20 @@ function executeCommand(
       document: newDoc,
       warnings: [],
     };
+  }
+
+  if (cmd.type === 'setTransparentBackground') {
+    if (!doc) {
+      return {
+        rejected: {
+          code: 'DOCUMENT_REQUIRED',
+          message: 'A document is required to set the background. Use createDocument first.',
+        },
+      };
+    }
+    // Only how the Pages are drawn changes: no Pattern is regenerated.
+    const { transparentBackground: _was, ...rest } = doc;
+    return { document: cmd.transparent ? { ...rest, transparentBackground: true } : rest, warnings: [] };
   }
 
   if (cmd.type === 'setFormat') {
@@ -424,42 +523,13 @@ function executeCommand(
     }
 
     const { block } = cmd;
-    const grid = gridFor(doc);
-    if (!isValidBlockSize(block.w, grid.cols) || !isValidBlockSize(block.h, grid.rows)) {
-      return {
-        rejected: {
-          code: 'block.sizeNotAllowed',
-          message: `Block size ${block.w}x${block.h} is not allowed. Width must be a whole number from 1 to ${grid.cols} and height from 1 to ${grid.rows}.`,
-        },
-      };
-    }
-
-    if (
-      block.col < 0 ||
-      block.row < 0 ||
-      block.col + block.w > grid.cols ||
-      block.row + block.h > grid.rows
-    ) {
-      return {
-        rejected: {
-          code: 'block.outOfGrid',
-          message: `Block position (${block.col}, ${block.row}) with size (${block.w}, ${block.h}) is outside grid (${grid.cols}x${grid.rows}).`,
-        },
-      };
-    }
-
-    const colourway = getColourway(doc.colourway);
-    const tintCount = colourway ? colourway.tints.length : 1;
-    if (!Number.isInteger(block.tint) || block.tint < 0 || block.tint >= tintCount) {
-      return {
-        rejected: {
-          code: 'block.tintOutOfRange',
-          message: `Tint index ${block.tint} is out of range for colourway ${doc.colourway} (0..${tintCount - 1}).`,
-        },
-      };
-    }
+    const problem = blockProblem(doc, block);
+    if (problem) return problem;
 
     const pageIndex = cmd.pageIndex ?? 0;
+    if (!doc.pages[pageIndex]) {
+      return { rejected: { code: 'page.unknown', message: `There is no Page at index ${pageIndex}.` } };
+    }
     const id = generateNextBlockId(doc, block.id);
     const newBlock: Block = {
       id,
@@ -471,19 +541,15 @@ function executeCommand(
     };
 
     const newPages = [...doc.pages];
-    if (pageIndex < newPages.length) {
-      newPages[pageIndex] = {
-        ...newPages[pageIndex]!,
-        pattern: [...newPages[pageIndex]!.pattern, newBlock],
-      };
-    } else {
-      newPages.push({ pattern: [newBlock] });
-    }
+    newPages[pageIndex] = {
+      ...newPages[pageIndex]!,
+      pattern: [...newPages[pageIndex]!.pattern, newBlock],
+    };
 
     return {
       document: {
         ...doc,
-        pages: newPages,
+        pages: markEdited(newPages, pageIndex),
         edited: true,
       },
       warnings: [],
@@ -538,7 +604,7 @@ function executeCommand(
     return {
       document: {
         ...doc,
-        pages: newPages,
+        pages: markEdited(newPages, pageIndex),
         edited: true,
       },
       warnings: [],
@@ -606,7 +672,7 @@ function executeCommand(
     return {
       document: {
         ...doc,
-        pages: newPages,
+        pages: markEdited(newPages, pageIndex),
         edited: true,
       },
       warnings: [],
@@ -646,7 +712,7 @@ function executeCommand(
     return {
       document: {
         ...doc,
-        pages: newPages,
+        pages: markEdited(newPages, pageIndex),
         edited: true,
       },
       warnings: [],
@@ -697,11 +763,72 @@ function executeCommand(
     return {
       document: {
         ...doc,
-        pages: newPages,
+        pages: markEdited(newPages, pageIndex),
         edited: true,
       },
       warnings: [],
     };
+  }
+
+  if (
+    cmd.type === 'setPageLayout' ||
+    cmd.type === 'setPageContent' ||
+    cmd.type === 'setPhoto' ||
+    cmd.type === 'clearPhoto'
+  ) {
+    if (!doc) {
+      return {
+        rejected: { code: 'DOCUMENT_REQUIRED', message: 'A document is required to change a Page.' },
+      };
+    }
+    const pageIndex = cmd.pageIndex ?? 0;
+    const page = doc.pages[pageIndex];
+    if (!page) {
+      return { rejected: { code: 'page.unknown', message: `There is no Page at index ${pageIndex}.` } };
+    }
+    const withPage = (next: Page): Document => ({
+      ...doc,
+      pages: doc.pages.map((p, i) => (i === pageIndex ? next : p)),
+    });
+    // Sets or clears the content of a Page without leaving an `undefined` key behind.
+    const withContent = (content: Page['content']): Page => {
+      const { content: _old, ...rest } = page;
+      return content ? { ...rest, content } : rest;
+    };
+
+    if (cmd.type === 'setPageLayout') {
+      if (cmd.layout !== 'pattern' && !Object.hasOwn(LAYOUT_TABLE, cmd.layout)) {
+        return { rejected: { code: 'layout.unknown', message: `Unknown Page layout: ${String(cmd.layout)}` } };
+      }
+      const layout: PageLayoutId = cmd.layout;
+      const zone = layoutTextZone(doc, layout);
+      const { textZone: _zone, layout: _layout, ...rest } = page;
+      const withLayout = withPage({
+        ...rest,
+        ...(layout !== 'pattern' ? { layout } : {}),
+        ...(zone ? { textZone: zone } : {}),
+      });
+      // An edited Pattern keeps its Blocks (the text-overlap Advisory warns); an unedited one is
+      // regenerated around the new zone with the same seed.
+      if (page.edited) return { document: withLayout, warnings: [] };
+      const res = regeneratePage(withLayout, pageIndex, pageSeed(withLayout, pageIndex));
+      return { document: { ...withLayout, pages: res.pages }, warnings: res.warnings };
+    }
+
+    if (cmd.type === 'setPageContent') {
+      const problem = contentPatchProblem(cmd.content);
+      if (problem) return { rejected: problem };
+      return { document: withPage(withContent(mergeContent(page.content, cmd.content))), warnings: [] };
+    }
+
+    if (cmd.type === 'setPhoto') {
+      const problem = photoProblem(cmd.photo);
+      if (problem) return { rejected: problem };
+      return { document: withPage(withContent(cleanContent({ ...page.content, photo: cmd.photo }))), warnings: [] };
+    }
+
+    const { photo: _photo, ...withoutPhoto } = page.content ?? {};
+    return { document: withPage(withContent(cleanContent(withoutPhoto))), warnings: [] };
   }
 
   if (cmd.type === 'setTextZone' || cmd.type === 'clearTextZone') {
@@ -741,16 +868,115 @@ function executeCommand(
       zone = { col: z.col, row: z.row, w: z.w, h: z.h, mode: z.mode };
     }
 
-    const base = doc.pages[0] ?? { pattern: [] };
+    const pageIndex = cmd.pageIndex ?? 0;
+    const base = doc.pages[pageIndex];
+    if (!base) {
+      return { rejected: { code: 'page.unknown', message: `There is no Page at index ${pageIndex}.` } };
+    }
     const { textZone: _old, ...rest } = base;
     const withZone: Document = {
       ...doc,
-      pages: [{ ...rest, ...(zone ? { textZone: zone } : {}) }, ...doc.pages.slice(1)],
+      pages: doc.pages.map((p, i) => (i === pageIndex ? { ...rest, ...(zone ? { textZone: zone } : {}) } : p)),
     };
     // An edited Pattern keeps its Blocks; only the zone is stored.
-    if (doc.edited) return { document: withZone, warnings: [] };
-    const res = regenerate(withZone, withZone.seed);
-    return { document: { ...withZone, pages: [res.pages[0]!, ...withZone.pages.slice(1)] }, warnings: res.warnings };
+    if (base.edited) return { document: withZone, warnings: [] };
+    const res = regeneratePage(withZone, pageIndex, pageSeed(withZone, pageIndex));
+    return { document: { ...withZone, pages: res.pages }, warnings: res.warnings };
+  }
+
+  if (cmd.type === 'addPage' || cmd.type === 'duplicatePage' || cmd.type === 'removePage' || cmd.type === 'movePage') {
+    if (!doc) {
+      return { rejected: { code: 'DOCUMENT_REQUIRED', message: 'A document is required to change its Pages.' } };
+    }
+    const count = doc.pages.length;
+    const isIndex = (v: unknown, max: number, min = 0): v is number =>
+      typeof v === 'number' && Number.isInteger(v) && v >= min && v <= max;
+    const unknownPage = (index: unknown): Rejection => ({
+      rejected: { code: 'page.unknown', message: `There is no Page at index ${String(index)} (the Document has ${count}).` },
+    });
+
+    if (cmd.type === 'addPage') {
+      if (cmd.layout !== 'pattern' && !Object.hasOwn(LAYOUT_TABLE, cmd.layout)) {
+        return { rejected: { code: 'layout.unknown', message: `Unknown Page layout: ${String(cmd.layout)}` } };
+      }
+      const after = cmd.afterIndex ?? count - 1;
+      // -1 puts the new Page first.
+      if (!isIndex(after, count - 1, -1)) return unknownPage(cmd.afterIndex);
+      const zone = layoutTextZone(doc, cmd.layout);
+      const seed = nextPageSeed(doc);
+      const fresh: Document = {
+        ...doc,
+        pages: [
+          ...doc.pages,
+          {
+            pattern: [],
+            seed,
+            edited: false,
+            ...(cmd.layout !== 'pattern' ? { layout: cmd.layout } : {}),
+            ...(zone ? { textZone: zone } : {}),
+          },
+        ],
+      };
+      const made = regeneratePage(fresh, count, seed);
+      const page = made.pages[count]!;
+      const pages = [...doc.pages.slice(0, after + 1), page, ...doc.pages.slice(after + 1)];
+      return {
+        document: { ...doc, pages },
+        warnings: made.warnings.map((w) => ({ ...w, pageIndex: after + 1 })),
+      };
+    }
+
+    if (cmd.type === 'duplicatePage') {
+      if (!isIndex(cmd.pageIndex, count - 1)) return unknownPage(cmd.pageIndex);
+      const copy = structuredClone(doc.pages[cmd.pageIndex]!);
+      return {
+        document: { ...doc, pages: [...doc.pages.slice(0, cmd.pageIndex + 1), copy, ...doc.pages.slice(cmd.pageIndex + 1)] },
+        warnings: [],
+      };
+    }
+
+    if (cmd.type === 'removePage') {
+      if (!isIndex(cmd.pageIndex, count - 1)) return unknownPage(cmd.pageIndex);
+      if (count === 1) {
+        return { rejected: { code: 'page.last', message: 'The last Page of a Document cannot be removed.' } };
+      }
+      return { document: { ...doc, pages: doc.pages.filter((_, i) => i !== cmd.pageIndex) }, warnings: [] };
+    }
+
+    if (!isIndex(cmd.from, count - 1)) return unknownPage(cmd.from);
+    if (!isIndex(cmd.to, count - 1)) return unknownPage(cmd.to);
+    const pages = [...doc.pages];
+    const [moved] = pages.splice(cmd.from, 1);
+    pages.splice(cmd.to, 0, moved!);
+    return { document: { ...doc, pages }, warnings: [] };
+  }
+
+  if (cmd.type === 'pickCandidate') {
+    if (!doc) {
+      return { rejected: { code: 'DOCUMENT_REQUIRED', message: 'A document is required to pick a Candidate.' } };
+    }
+    const pageIndex = cmd.pageIndex ?? 0;
+    if (!doc.pages[pageIndex]) {
+      return { rejected: { code: 'page.unknown', message: `There is no Page at index ${pageIndex}.` } };
+    }
+    const { seed, pattern } = cmd.candidate;
+    if (typeof seed !== 'string' || seed === '') {
+      return { rejected: { code: 'candidate.invalid', message: 'A Candidate needs the non-empty seed that drew it.' } };
+    }
+    const ids = new Set<string>();
+    for (const block of pattern) {
+      const problem = blockProblem(doc, block);
+      if (problem) return problem;
+      if (ids.has(block.id)) {
+        return { rejected: { code: 'block.duplicateId', message: `Two Blocks of the Candidate share the id ${block.id}.` } };
+      }
+      ids.add(block.id);
+    }
+    // The user chose this exact Pattern, so a later Format or Density change remaps it instead of regenerating it.
+    const pages = doc.pages.map((p, i) => (i === pageIndex ? { ...p, pattern, seed, edited: true } : p));
+    // A Candidate is a new roll, which draws from the newest Reference set (ADR 0009).
+    const generator = { ...doc.generator, referenceSet: LATEST_REFERENCE_SET };
+    return { document: { ...doc, generator, pages }, warnings: [] };
   }
 
   if (cmd.type === 'loadDocument') {

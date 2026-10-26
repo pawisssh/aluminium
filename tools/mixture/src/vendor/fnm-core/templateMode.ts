@@ -1,7 +1,7 @@
 import type { Block, GeneratorParams, Grid, Page, PatternFamily, TextZone } from './types.js';
 import { countCornerMeets } from './generator.js';
 import { checkPatternRules, COVERAGE_LIMIT } from './patternRules.js';
-import { FLAT_BELOW, patternSimilarity, slopeShapeProblem, REFERENCE_PATTERNS, REFERENCE_SIZE, trendDegrees } from './referencePatterns.js';
+import { FLAT_BELOW, patternSimilarity, referencePatternsFor, slopeShapeProblem, REFERENCE_SIZE, trendDegrees } from './referencePatterns.js';
 import { CLEAR_ZONE_MAX_OVERLAP, CLEAR_ZONE_RING_DEPTH, measureClearZoneOverlap } from './textZone.js';
 
 /**
@@ -43,7 +43,7 @@ export interface TemplateRect {
 type Mask = boolean[][];
 
 /** Nearest-neighbour by cell centre: the 16x16 reference stretched over the Grid. */
-function scaleMask(mask: readonly string[], grid: Grid): Mask {
+export function scaleMask(mask: readonly string[], grid: Grid): Mask {
   const n = REFERENCE_SIZE;
   return Array.from({ length: grid.rows }, (_, r) =>
     Array.from({ length: grid.cols }, (_, c) => {
@@ -90,7 +90,7 @@ function transpose(m: Mask): Mask {
 }
 
 /** The smaller of the row-first and column-first decompositions (a tie goes to the row-first one). */
-function decompose(m: Mask): TemplateRect[] {
+export function decompose(m: Mask): TemplateRect[] {
   const a = runRects(m);
   const b = runRects(transpose(m)).map((r) => ({ col: r.row, row: r.col, w: r.h, h: r.w }));
   return b.length < a.length ? b : a;
@@ -251,8 +251,9 @@ export function templatePattern(
   if (count < 2) return null;
   const { slope, guidance, cornerMeetLimit } = params;
   const family = params.family ?? 'auto';
+  const set = params.referenceSet ?? 1;
   const refs = shuffled(
-    REFERENCE_PATTERNS.filter((p) => p.slope === slope && (family === 'auto' || p.family === family)),
+    referencePatternsFor(set).filter((p) => p.slope === slope && (family === 'auto' || p.family === family)),
     rng
   );
   if (refs.length === 0) return null;
@@ -308,7 +309,7 @@ export function templatePattern(
         continue;
       }
       // Valid. The first reference in the shuffled order to reach the goal wins outright.
-      const iou = patternSimilarity(blocks, grid, { slope, ...(family === 'auto' ? {} : { family }) }).iou;
+      const iou = patternSimilarity(blocks, grid, { slope, set, ...(family === 'auto' ? {} : { family }) }).iou;
       if (iou >= goal && bestPerRef.slice(0, refIndex).every((b) => b === undefined)) return blocks;
       if (!bestPerRef[refIndex] || iou > bestPerRef[refIndex].iou) bestPerRef[refIndex] = { blocks, iou };
     }
