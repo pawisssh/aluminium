@@ -1,7 +1,5 @@
-import { useMemo } from 'react'
 import { Dices, Plus, Trash2 } from 'lucide-react'
 import { BRICK_GRIDS, brickDefaults, type BrickGrid, type BrickSettings } from '@/core/brick'
-import { otherTemplate, templateChoices } from '@/core/brickTemplates'
 import { COLOUR_FAMILIES, colourHex, familyTints, type ColourFamily, type Tint } from '@/core/colours'
 import type { PlanType } from '@/core/planTypes'
 import { generateRandomSeed, id } from '@/playground'
@@ -30,19 +28,6 @@ const SLOPES: { value: Slope; label: string }[] = [
 
 const gridKey = (g: BrickGrid) => `${g.cols}x${g.rows}`
 
-/** A new Brick of the same kind: another Brick template of its Brick family and Slope, or a new seed. */
-function redrawnBrick(brick: BrickSettings, grid: BrickGrid): BrickSettings {
-  if (!brick.template) return { ...brick, seed: generateRandomSeed() }
-  return { ...brick, template: otherTemplate(templateChoices(brick.family, brick.slope, grid), brick.template)?.key }
-}
-
-/** Keeps a template Brick a template of its Brick family and Slope: the first one when its own isn't. */
-function fitTemplate(brick: BrickSettings, grid: BrickGrid): BrickSettings {
-  if (brick.template === undefined) return brick
-  const choices = templateChoices(brick.family, brick.slope, grid)
-  return choices.some((t) => t.key === brick.template) ? brick : { ...brick, template: choices[0]?.key }
-}
-
 /** The Bricks tab: every Plan type a Plan can be, and the Brick grid every Brick is drawn on. */
 export function PlanTypes({
   planTypes,
@@ -65,12 +50,28 @@ export function PlanTypes({
   return (
     <div className="flex flex-col gap-4">
       <section className="flex flex-wrap items-end justify-between gap-4 rounded-xl border bg-card p-4">
-        <BrickGridPicker brickGrid={brickGrid} onGridChange={onGridChange} />
+        <Field label="Brick grid">
+          <ToggleGroup
+            variant="outline"
+            spacing={0}
+            value={[gridKey(brickGrid)]}
+            onValueChange={(v) => {
+              const picked = BRICK_GRIDS.find((g) => gridKey(g.grid) === v[0])
+              if (picked) onGridChange(picked.grid)
+            }}
+          >
+            {BRICK_GRIDS.map((g) => (
+              <ToggleGroupItem key={gridKey(g.grid)} value={gridKey(g.grid)}>
+                {g.label}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+        </Field>
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm text-muted-foreground">
             {inDraws} of {planTypes.length} in draws
           </span>
-          <Button variant="secondary" onClick={() => onChange(planTypes.map((t) => ({ ...t, brick: redrawnBrick(t.brick, brickGrid) })))}>
+          <Button variant="secondary" onClick={() => onChange(planTypes.map((t) => ({ ...t, brick: { ...t.brick, seed: generateRandomSeed() } })))}>
             <Dices /> Shuffle all Bricks
           </Button>
           <Button
@@ -109,29 +110,6 @@ export function PlanTypes({
   )
 }
 
-/** The one Brick grid every Brick is drawn on. */
-function BrickGridPicker({ brickGrid, onGridChange }: { brickGrid: BrickGrid; onGridChange: (grid: BrickGrid) => void }) {
-  return (
-    <Field label="Brick grid">
-      <ToggleGroup
-        variant="outline"
-        spacing={0}
-        value={[gridKey(brickGrid)]}
-        onValueChange={(v) => {
-          const picked = BRICK_GRIDS.find((g) => gridKey(g.grid) === v[0])
-          if (picked) onGridChange(picked.grid)
-        }}
-      >
-        {BRICK_GRIDS.map((g) => (
-          <ToggleGroupItem key={gridKey(g.grid)} value={gridKey(g.grid)}>
-            {g.label}
-          </ToggleGroupItem>
-        ))}
-      </ToggleGroup>
-    </Field>
-  )
-}
-
 function PlanTypeCard({
   type,
   brickGrid,
@@ -145,9 +123,7 @@ function PlanTypeCard({
   onChange: (type: PlanType) => void
   onRemove: () => void
 }) {
-  const setBrick = (brick: Partial<BrickSettings>) => onChange({ ...type, brick: fitTemplate({ ...type.brick, ...brick }, brickGrid) })
-  const { family, slope, template } = type.brick
-  const choices = useMemo(() => (template ? templateChoices(family, slope, brickGrid) : []), [template, family, slope, brickGrid])
+  const setBrick = (brick: Partial<BrickSettings>) => onChange({ ...type, brick: { ...type.brick, ...brick } })
   const defaults = brickDefaults(brickGrid)
   const blockCounts = blockCountRangeFor({ ...brickGrid, cellW: 1, cellH: 1 })
 
@@ -158,7 +134,7 @@ function PlanTypeCard({
           <div className="flex size-20 items-center justify-center rounded-lg bg-muted">
             <BrickIcon brick={type.brick} colour={type.colour} size={64} />
           </div>
-          <Button size="sm" variant="secondary" onClick={() => onChange({ ...type, brick: redrawnBrick(type.brick, brickGrid) })}>
+          <Button size="sm" variant="secondary" onClick={() => setBrick({ seed: generateRandomSeed() })}>
             <Dices /> Brick
           </Button>
         </div>
@@ -220,44 +196,7 @@ function PlanTypeCard({
         </Field>
       </div>
 
-      <Field label="Shape">
-        <ToggleGroup
-          variant="outline"
-          size="sm"
-          spacing={0}
-          value={[template ? 'template' : 'generated']}
-          onValueChange={(v) => v[0] && setBrick({ template: v[0] === 'template' ? (template ?? '') : undefined })}
-        >
-          <ToggleGroupItem value="generated" className="flex-1" title="Drawn by the Pattern Builder's generator from a seed">
-            Generated
-          </ToggleGroupItem>
-          <ToggleGroupItem value="template" className="flex-1" title="One of the Brick templates, the Reference Patterns as block's Brick gallery draws them">
-            Brick template
-          </ToggleGroupItem>
-        </ToggleGroup>
-      </Field>
-
-      {template !== undefined &&
-        (choices.length > 0 ? (
-          <div className="flex flex-wrap gap-1.5">
-            {choices.map((t) => (
-              <button
-                key={t.key}
-                type="button"
-                aria-pressed={t.key === template}
-                title={`${t.family} · Reference ${t.reference}`}
-                onClick={() => setBrick({ template: t.key })}
-                className={`flex size-11 items-center justify-center rounded-md bg-muted ${t.key === template ? 'ring-2 ring-primary' : 'hover:ring-1 hover:ring-border'}`}
-              >
-                <BrickIcon brick={{ family: t.family, slope: t.slope, seed: t.key, template: t.key }} colour={type.colour} size={32} />
-              </button>
-            ))}
-          </div>
-        ) : (
-          <p className="text-xs text-muted-foreground">No Brick template of this Brick family and Slope keeps the rules on this Brick grid.</p>
-        ))}
-
-      <details className={`text-sm ${template !== undefined ? 'hidden' : ''}`}>
+      <details className="text-sm">
         <summary className="cursor-pointer text-muted-foreground">Advanced · seed {type.brick.seed}</summary>
         <div className="mt-3 grid grid-cols-2 gap-2">
           <Field label="Seed">

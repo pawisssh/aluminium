@@ -1,8 +1,8 @@
 import { getColourway, DEFAULT_COLOURWAY_ID } from '@/vendor/fnm-core/colourway'
 import { defaultBlockCountFor, generatePattern } from '@/vendor/fnm-core/generator'
 import { createRng } from '@/vendor/fnm-core/prng'
+import { LATEST_REFERENCE_SET } from '@/vendor/fnm-core/referencePatterns'
 import type { Grid, PatternFamily, Slope } from '@/vendor/fnm-core/types'
-import { brickTemplate, templateBrick } from './brickTemplates'
 
 export interface BrickSettings {
   family: PatternFamily
@@ -12,8 +12,6 @@ export interface BrickSettings {
   blockCount?: number
   guidance?: number
   cornerMeetLimit?: number
-  /** A Brick template's key: the Brick is that template, not a generated one. */
-  template?: string
 }
 
 /** The cells every Brick is drawn on, `cols` across and `rows` down. */
@@ -32,18 +30,13 @@ export const BRICK_GRIDS: { grid: BrickGrid; label: string }[] = [
 
 export const DEFAULT_BRICK_GRID: BrickGrid = BRICK_GRIDS[0]!.grid
 
-// The Reference set generated Bricks were made with: a newer one would redraw every seed's Brick.
-const BRICK_REFERENCE_SET = 2
-
 /** The Pattern Builder settings a Brick uses when it doesn't set its own. */
 export function brickDefaults(grid: BrickGrid = DEFAULT_BRICK_GRID) {
   return { blockCount: defaultBlockCountFor({ ...grid, cellW: 1, cellH: 1 }), guidance: 60, cornerMeetLimit: 1 }
 }
 
-/** A Brick as rows of filled cells, row 0 at the top: its Brick template, or else drawn by the Pattern Builder's generator. */
+/** A Brick as rows of filled cells, row 0 at the top, drawn by the Pattern Builder's generator. */
 export function generateBrick(settings: BrickSettings, brickGrid: BrickGrid = DEFAULT_BRICK_GRID): boolean[][] {
-  const template = settings.template && brickTemplate(settings.template)
-  if (template) return templateBrick(template, brickGrid)
   const grid: Grid = { ...brickGrid, cellW: 1, cellH: 1 }
   const defaults = brickDefaults(brickGrid)
   // The colourway only picks Block tints, which a single-colour Brick ignores.
@@ -53,7 +46,7 @@ export function generateBrick(settings: BrickSettings, brickGrid: BrickGrid = DE
     blockCount: settings.blockCount ?? defaults.blockCount,
     guidance: settings.guidance ?? defaults.guidance,
     cornerMeetLimit: settings.cornerMeetLimit ?? defaults.cornerMeetLimit,
-    referenceSet: BRICK_REFERENCE_SET,
+    referenceSet: LATEST_REFERENCE_SET,
   })
   const mask = Array.from({ length: grid.rows }, () => Array<boolean>(grid.cols).fill(false))
   for (const b of blocks)

@@ -20,10 +20,6 @@ _Avoid_: Port, group, bucket
 A Plan type's icon: a single-colour Pattern-Builder Pattern on the Brick grid, so it is one piece joined by edges or corners and has a Brick family and a Slope.
 _Avoid_: Block (one rectangle inside a Pattern, in the Pattern Builder), icon, pixel art
 
-**Brick template**:
-A fixed Brick: one Reference Pattern from the Pattern Builder laid on the Brick grid by area, as block's Brick gallery draws it. On the Bricks tab a Plan type's Brick is either generated from a seed or a Brick template of its Brick family (Auto: any) and Slope, picked from those that keep the rules, one per shape on the Brick grid.
-_Avoid_: preset
-
 **Brick grid**:
 The cells every Brick is drawn on: 4×4 by default, or 8×8, 16×16 or a portrait grid (4×6, 8×12) to see how Bricks read at other sizes. One setting for all Bricks.
 _Avoid_: Brick size, canvas

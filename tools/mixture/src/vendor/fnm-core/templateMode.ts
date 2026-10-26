@@ -1,15 +1,7 @@
 import type { Block, GeneratorParams, Grid, Page, PatternFamily, TextZone } from './types.js';
 import { countCornerMeets } from './generator.js';
 import { checkPatternRules, COVERAGE_LIMIT } from './patternRules.js';
-import {
-  AREA_RESAMPLE_SET,
-  FLAT_BELOW,
-  patternSimilarity,
-  referencePatternsFor,
-  slopeShapeProblem,
-  REFERENCE_SIZE,
-  trendDegrees,
-} from './referencePatterns.js';
+import { FLAT_BELOW, patternSimilarity, referencePatternsFor, slopeShapeProblem, REFERENCE_SIZE, trendDegrees } from './referencePatterns.js';
 import { CLEAR_ZONE_MAX_OVERLAP, CLEAR_ZONE_RING_DEPTH, measureClearZoneOverlap } from './textZone.js';
 
 /**
@@ -60,38 +52,6 @@ export function scaleMask(mask: readonly string[], grid: Grid): Mask {
       return mask[rr]![cc] === '#';
     })
   );
-}
-
-/**
- * Area coverage: a Grid cell is filled when at least half the 16x16 reference area under it is filled,
- * counting partly covered reference cells by their overlap. Centre sampling drops a part thinner than a
- * Grid cell (18:1677's 3-wide stem vanished at 4x4); this keeps it once it fills half a cell.
- * Integer arithmetic, so a cell at exactly half (8 of 16 at 4x4) is never lost to rounding.
- */
-export function coverMask(mask: readonly string[], grid: Grid): Mask {
-  const n = REFERENCE_SIZE;
-  // Overlap of reference cell i with Grid cell t along an axis of `size` cells, in units of 1/(n x size) of the axis.
-  const overlap = (i: number, t: number, size: number) =>
-    Math.max(0, Math.min((i + 1) * size, (t + 1) * n) - Math.max(i * size, t * n));
-  return Array.from({ length: grid.rows }, (_, r) =>
-    Array.from({ length: grid.cols }, (_, c) => {
-      let filled = 0;
-      for (let i = 0; i < n; i++) {
-        const oy = overlap(i, r, grid.rows);
-        if (oy === 0) continue;
-        for (let j = 0; j < n; j++) {
-          if (mask[i]![j] === '#') filled += oy * overlap(j, c, grid.cols);
-        }
-      }
-      // A Grid cell is n x n units.
-      return 2 * filled >= n * n;
-    })
-  );
-}
-
-/** The reference as template mode lays it on the Grid: area coverage from AREA_RESAMPLE_SET, centre sampling before. */
-export function templateMask(mask: readonly string[], grid: Grid, referenceSet: number | undefined): Mask {
-  return (referenceSet ?? 1) >= AREA_RESAMPLE_SET ? coverMask(mask, grid) : scaleMask(mask, grid);
 }
 
 /** Rectangles from merging equal horizontal runs of consecutive rows. */
@@ -308,7 +268,7 @@ export function templatePattern(
 
   for (let attempt = 0; attempt < ATTEMPTS; attempt++) {
     const refIndex = attempt % refs.length;
-    const mask = templateMask(refs[refIndex]!.mask, grid, set);
+    const mask = scaleMask(refs[refIndex]!.mask, grid);
     let cover: TemplateRect | null = null;
     if (zoned?.mode === 'clear') trimClearZone(mask, zoned.zone);
     if (zoned?.mode === 'flat') {
