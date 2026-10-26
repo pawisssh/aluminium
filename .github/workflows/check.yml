@@ -33,9 +33,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: lts/*
-          cache: npm
-          cache-dependency-path: tools/${{ matrix.tool }}/package-lock.json
-      - run: npm ci
+      # ~/.npm stays on the runner between jobs, so no Actions cache is needed.
+      - run: npm ci --prefer-offline --no-audit --no-fund
       - run: npm run check
       - run: BLOCK_REPO="$HOME/Projects/finnomena/block" npm run vendor:check --if-present
 
