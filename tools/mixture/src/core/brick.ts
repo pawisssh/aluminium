@@ -1,37 +1,54 @@
 import { getColourway, DEFAULT_COLOURWAY_ID } from '@/vendor/fnm-core/colourway'
-import { generatePattern } from '@/vendor/fnm-core/generator'
+import { defaultBlockCountFor, generatePattern } from '@/vendor/fnm-core/generator'
 import { createRng } from '@/vendor/fnm-core/prng'
 import { LATEST_REFERENCE_SET } from '@/vendor/fnm-core/referencePatterns'
 import type { Grid, PatternFamily, Slope } from '@/vendor/fnm-core/types'
-
-export const BRICK_SIZE = 4
 
 export interface BrickSettings {
   family: PatternFamily
   slope: Slope
   seed: string
-  /** The Pattern Builder's own settings; the defaults suit a 4x4 grid. */
+  /** The Pattern Builder's own settings; left out, they follow the Brick grid (see `brickDefaults`). */
   blockCount?: number
   guidance?: number
   cornerMeetLimit?: number
 }
 
-export const BRICK_DEFAULTS = { blockCount: 3, guidance: 60, cornerMeetLimit: 1 } as const
+/** The cells every Brick is drawn on, `cols` across and `rows` down. */
+export interface BrickGrid {
+  cols: number
+  rows: number
+}
 
-const GRID: Grid = { cols: BRICK_SIZE, rows: BRICK_SIZE, cellW: 1, cellH: 1 }
+export const BRICK_GRIDS: { grid: BrickGrid; label: string }[] = [
+  { grid: { cols: 4, rows: 4 }, label: '4×4' },
+  { grid: { cols: 8, rows: 8 }, label: '8×8' },
+  { grid: { cols: 16, rows: 16 }, label: '16×16' },
+  { grid: { cols: 4, rows: 6 }, label: '4×6 portrait' },
+  { grid: { cols: 8, rows: 12 }, label: '8×12 portrait' },
+]
+
+export const DEFAULT_BRICK_GRID: BrickGrid = BRICK_GRIDS[0]!.grid
+
+/** The Pattern Builder settings a Brick uses when it doesn't set its own. */
+export function brickDefaults(grid: BrickGrid = DEFAULT_BRICK_GRID) {
+  return { blockCount: defaultBlockCountFor({ ...grid, cellW: 1, cellH: 1 }), guidance: 60, cornerMeetLimit: 1 }
+}
 
 /** A Brick as rows of filled cells, row 0 at the top, drawn by the Pattern Builder's generator. */
-export function generateBrick(settings: BrickSettings): boolean[][] {
+export function generateBrick(settings: BrickSettings, brickGrid: BrickGrid = DEFAULT_BRICK_GRID): boolean[][] {
+  const grid: Grid = { ...brickGrid, cellW: 1, cellH: 1 }
+  const defaults = brickDefaults(brickGrid)
   // The colourway only picks Block tints, which a single-colour Brick ignores.
-  const blocks = generatePattern(GRID, getColourway(DEFAULT_COLOURWAY_ID)!, createRng(settings.seed), {
+  const blocks = generatePattern(grid, getColourway(DEFAULT_COLOURWAY_ID)!, createRng(settings.seed), {
     family: settings.family,
     slope: settings.slope,
-    blockCount: settings.blockCount ?? BRICK_DEFAULTS.blockCount,
-    guidance: settings.guidance ?? BRICK_DEFAULTS.guidance,
-    cornerMeetLimit: settings.cornerMeetLimit ?? BRICK_DEFAULTS.cornerMeetLimit,
+    blockCount: settings.blockCount ?? defaults.blockCount,
+    guidance: settings.guidance ?? defaults.guidance,
+    cornerMeetLimit: settings.cornerMeetLimit ?? defaults.cornerMeetLimit,
     referenceSet: LATEST_REFERENCE_SET,
   })
-  const mask = Array.from({ length: BRICK_SIZE }, () => Array<boolean>(BRICK_SIZE).fill(false))
+  const mask = Array.from({ length: grid.rows }, () => Array<boolean>(grid.cols).fill(false))
   for (const b of blocks)
     for (let r = b.row; r < b.row + b.h; r++) for (let c = b.col; c < b.col + b.w; c++) mask[r]![c] = true
   return mask

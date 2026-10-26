@@ -1,19 +1,23 @@
-import { useMemo } from 'react'
+import { useContext, useMemo } from 'react'
 import { generateBrick, type BrickSettings } from '@/core/brick'
 import { colourFromKey, colourHex, type PlanColour } from '@/core/colours'
+import { BrickGridContext } from './brickGrid'
 
-/** Draws rows of cells as square tiles; a null cell is left empty. */
+/** Draws rows of cells as square tiles, `size` along the longer side; a null cell is left empty. */
 function CellGrid({ cells, size, className }: { cells: (string | null)[][]; size: number; className?: string }) {
-  const n = cells.length
+  const rows = cells.length
+  const cols = cells[0]?.length ?? 0
+  const cell = size / Math.max(rows, cols, 1)
   return (
-    <svg width={size} height={size} viewBox={`0 0 ${n} ${n}`} shapeRendering="crispEdges" className={className} aria-hidden>
+    <svg width={cols * cell} height={rows * cell} viewBox={`0 0 ${cols} ${rows}`} shapeRendering="crispEdges" className={className} aria-hidden>
       {cells.flatMap((row, r) => row.map((fill, c) => (fill ? <rect key={`${r}-${c}`} x={c} y={r} width={1} height={1} fill={fill} /> : null)))}
     </svg>
   )
 }
 
 export function BrickIcon({ brick, colour, size = 36 }: { brick: BrickSettings; colour: PlanColour; size?: number }) {
-  const mask = useMemo(() => generateBrick(brick), [brick])
+  const grid = useContext(BrickGridContext)
+  const mask = useMemo(() => generateBrick(brick, grid), [brick, grid])
   const fill = colourHex(colour)
   return <CellGrid cells={mask.map((row) => row.map((on) => (on ? fill : null)))} size={size} />
 }
