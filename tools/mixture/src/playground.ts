@@ -85,14 +85,19 @@ export const CASE_COLOURS: PlanColour[] = [
   { family: 'red', tint: 150 },
 ]
 
-/** One Plan per value in percent, worth that many thousand baht, in the case colours in turn. */
+/** One Plan per value in percent, worth that many thousand baht, each in a different case colour picked at random. */
 export function casePlans(values: number[]): Plan[] {
+  const colours = [...CASE_COLOURS]
+  for (let i = colours.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[colours[i], colours[j]] = [colours[j]!, colours[i]!]
+  }
   return values.map((value, i) => ({
     id: id(),
     name: `Plan ${i + 1}`,
     value: Math.round(value * 1000),
     change: 0,
-    colour: CASE_COLOURS[i]!,
+    colour: colours[i]!,
     brick: { family: 'auto', slope: 'half', seed: generateRandomSeed() },
   }))
 }
