@@ -91,14 +91,18 @@ describe('buildMix', () => {
     expect(mix.hiddenColours).toBe(4)
   })
 
-  // An ordered Mix fills its halves one after the other, so a colour can split across them.
-  it.each([4, 8] as const)('keeps each Plan colour in one piece joined by edges in a random Mix (size %i)', (size) => {
+  it.each([
+    ['random', 4],
+    ['random', 8],
+    ['ordered', 4],
+    ['ordered', 8],
+  ] as const)('keeps each Plan colour in one piece joined by edges in the %s layout (size %i)', (layout, size) => {
     const palette = [purple, green, yellow, { family: 'blue', tint: 100 }, { family: 'navy', tint: 100 }] as const
     for (let trial = 0; trial < 200; trial++) {
       // A spread of portfolios: 1 to 5 colours with uneven values.
       const n = 1 + (trial % palette.length)
       const slices = palette.slice(0, n).map((colour, i) => ({ value: 1 + ((trial * 37 + i * 101) % 97), colour }))
-      const mix = buildMix(slices, size, { layout: 'random', seed: `t${trial}` })
+      const mix = buildMix(slices, size, { layout, seed: `t${trial}` })
       for (const key of new Set(mix.cells.flat())) {
         expect(pieces(mix.cells, key!), `${key} in trial ${trial}`).toBe(1)
       }
@@ -143,9 +147,9 @@ describe('buildMix', () => {
     [4, ['PPGG', 'PPGG', 'PPGY', 'PPYY']],
     [8, ['PPPPGGGG', 'PPPPGGGG', 'PPPPGGGG', 'PPPPGGGG', 'PPPPGGGG', 'PPPPYYYY', 'PPPPYYYY', 'PPPPYYYY']],
   ] as const)(
-    'gives an ordered Mix colour with 50–75% of the value just the left half, and splits the right half between the rest (size %i)',
+    'gives an ordered Mix colour with 50–75% of the value just the left Side, and splits the right Side between the rest (size %i)',
     (size, rows) => {
-      // Purple 59% fills the left half; green and yellow split the right half 25:16.
+      // Purple 59% fills the left Side; green and yellow split the right Side 25:16.
       const slices = [
         { value: 59, colour: purple },
         { value: 25, colour: green },
@@ -155,13 +159,43 @@ describe('buildMix', () => {
     },
   )
 
-  it('fills an ordered Mix left half first, each half row by row from its top-left, once a colour passes 75%', () => {
-    // Purple 80% of 16 cells is 12.8: the left half, then on into the right half.
+  it('spills an ordered Mix colour past 75% from the left Side onto the top of the right', () => {
+    // Purple 80% of 16 cells is 12.8: the left Side, then the top of the right Side.
     const slices = [
       { value: 80, colour: purple },
       { value: 20, colour: green },
     ]
     expect(short(buildMix(slices, 4, { layout: 'ordered', seed: 'a' }).cells)).toEqual(['PPPP', 'PPPP', 'PPPG', 'PPGG'])
+  })
+
+  it.each([4, 8] as const)('keeps every Plan colour but the largest in one Side of an ordered Mix (size %i)', (size) => {
+    const palette = [purple, green, yellow, { family: 'blue', tint: 100 }, { family: 'navy', tint: 100 }] as const
+    for (let trial = 0; trial < 200; trial++) {
+      const n = 2 + (trial % (palette.length - 1))
+      const slices = palette.slice(0, n).map((colour, i) => ({ value: 1 + ((trial * 37 + i * 101) % 97), colour }))
+      // The largest value, the first listed on a tie.
+      const largest = slices.reduce((a, b) => (b.value > a.value ? b : a))
+      const mix = buildMix(slices, size, { layout: 'ordered', seed: 'a' })
+      for (const key of new Set(mix.cells.flat())) {
+        if (key === `${largest.colour.family}-100`) continue
+        const sides = new Set(mix.cells.flatMap((row) => row.flatMap((cell, c) => (cell === key ? [c < size / 2] : []))))
+        expect(sides.size, `${key} in trial ${trial}`).toBe(1)
+      }
+    }
+  })
+
+  // Values are cell counts out of 16, written as family initials; the first listed wins a tie.
+  it.each([
+    ['puts the largest colour at the top of the left Side and the rest on the right first', 'N6 M4 B4 Y2', ['NNMM', 'NNMM', 'NNBB', 'YYBB']],
+    ['turns back at the end of each row', 'B6 N5 M3 Y2', ['BBNN', 'BBNN', 'BBNM', 'YYMM']],
+    ['spans nothing when the two largest colours tie', 'B5 N5 Y3 M3', ['BBNN', 'BBNN', 'BMNY', 'MMYY']],
+    ['spills the largest colour onto the top of the right Side', 'B7 N3 M3 Y3', ['BBBB', 'BBNN', 'BYNM', 'YYMM']],
+    ['spills a single cell of the largest colour when nothing else fits', 'B7 N7 Y2', ['BBBN', 'BBNN', 'BBNN', 'YYNN']],
+    ['puts a smaller colour on the right when a larger one no longer fits there', 'B6 N5 G4 Y1', ['BBBB', 'BBNN', 'GGNN', 'GGYN']],
+  ] as const)('%s in an ordered Mix (%s)', (_, spec, rows) => {
+    const families = { B: 'blue', N: 'navy', M: 'magenta', Y: 'yellow', G: 'green' } as const
+    const slices = spec.split(' ').map((s) => ({ value: Number(s.slice(1)), colour: { family: families[s[0] as keyof typeof families], tint: 100 as const } }))
+    expect(short(buildMix(slices, 4, { layout: 'ordered', seed: 'a' }).cells)).toEqual(rows)
   })
 
   it('leaves every cell empty when the Plans have no value', () => {
