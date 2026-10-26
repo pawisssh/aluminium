@@ -2,23 +2,26 @@ import { useEffect, useMemo, useState } from 'react'
 import { Dices, Plus, RotateCcw, TriangleAlert } from 'lucide-react'
 import { colourFromKey, colourHex, colourKey, COLOUR_FAMILIES } from '@/core/colours'
 import { buildMix, type Mix, type MixLayout, type MixSize } from '@/core/mix'
-import { baht, casePlans, generateRandomSeed, initialPlayground, newPlan, newPortfolio, portfolioValue, usePlayground, type Plan, type Portfolio } from '@/playground'
+import type { PlanType } from '@/core/planTypes'
+import { baht, casePlans, generateRandomSeed, initialPlayground, newPlan, newPortfolio, portfolioValue, showPlans, storedPlan, usePlayground, type Portfolio, type ShownPlan } from '@/playground'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { BrickGridContext } from '@/components/brickGrid'
 import { MixIcon } from '@/components/icons'
 import { MixCases } from '@/components/MixCases'
 import { MixCasePicker } from '@/components/MixCasePicker'
 import { MIX_CASE_COLOURS } from '@/core/mixCases'
 import { PhonePreview } from '@/components/PhonePreview'
 import { PlanEditor } from '@/components/PlanEditor'
+import { PlanTypes } from '@/components/PlanTypes'
 
-type Page = 'playground' | 'cases'
-const pageFromHash = (): Page => (window.location.hash === '#cases' ? 'cases' : 'playground')
+type Page = 'playground' | 'bricks' | 'cases'
+const pageFromHash = (): Page => (window.location.hash === '#cases' ? 'cases' : window.location.hash === '#bricks' ? 'bricks' : 'playground')
 
-/** The page in the URL hash, so #cases can be linked. */
+/** The page in the URL hash, so #bricks and #cases can be linked. */
 function usePage() {
   const [page, setPage] = useState(pageFromHash)
   useEffect(() => {
@@ -26,13 +29,14 @@ function usePage() {
     window.addEventListener('hashchange', onHash)
     return () => window.removeEventListener('hashchange', onHash)
   }, [])
-  return [page, (p: Page) => (window.location.hash = p === 'cases' ? 'cases' : '')] as const
+  return [page, (p: Page) => (window.location.hash = p === 'playground' ? '' : p)] as const
 }
 
 export default function App() {
   const [state, setState] = usePlayground()
   const [page, setPage] = usePage()
-  const { portfolios, mixSize, mixLayout, selectedId } = state
+  const { planTypes, brickGrid, mixSize, mixLayout, selectedId } = state
+  const portfolios = useMemo(() => state.portfolios.map((p) => ({ ...p, plans: showPlans(p.plans, planTypes) })), [state.portfolios, planTypes])
   const selected = portfolios.find((p) => p.id === selectedId) ?? portfolios[0]
 
   const mixes = useMemo(
@@ -40,129 +44,153 @@ export default function App() {
     [portfolios, mixSize, mixLayout],
   )
 
-  const updatePortfolio = (p: Portfolio) => setState((s) => ({ ...s, portfolios: s.portfolios.map((q) => (q.id === p.id ? p : q)) }))
+  const plansByType = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const plan of state.portfolios.flatMap((p) => p.plans)) counts.set(plan.typeId, (counts.get(plan.typeId) ?? 0) + 1)
+    return counts
+  }, [state.portfolios])
+
+  const updatePortfolio = (p: Portfolio) =>
+    setState((s) => ({ ...s, portfolios: s.portfolios.map((q) => (q.id === p.id ? { ...p, plans: p.plans.map(storedPlan) } : q)) }))
 
   return (
-    <div className="flex min-h-svh flex-col gap-8 p-4 lg:flex-row lg:items-start lg:p-8">
-      {page === 'playground' && (
-        <div className="flex justify-center lg:sticky lg:top-8">
-          <PhonePreview portfolios={portfolios} mixes={mixes} selectedId={selected?.id ?? ''} />
-        </div>
-      )}
-
-      <main className="flex min-w-0 flex-1 flex-col gap-6">
-        <header className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold">
-              Mixture <span className="font-mono text-xs font-normal text-muted-foreground">{__BUILD__}</span>
-            </h1>
-            <p className="text-sm text-muted-foreground">How a Portfolio's allocation reads as a Mix, and how each Plan's Brick looks.</p>
+    <BrickGridContext value={brickGrid}>
+      <div className="flex min-h-svh flex-col gap-8 p-4 lg:flex-row lg:items-start lg:p-8">
+        {page !== 'cases' && (
+          <div className="flex justify-center lg:sticky lg:top-8">
+            <PhonePreview portfolios={portfolios} mixes={mixes} selectedId={selected?.id ?? ''} />
           </div>
-          <div className="flex flex-wrap items-center gap-4">
-            <Setting label="Page">
-              <ToggleGroup variant="outline" spacing={0} value={[page]} onValueChange={(v) => v[0] && setPage(v[0] as Page)}>
-                <ToggleGroupItem value="playground">Playground</ToggleGroupItem>
-                <ToggleGroupItem value="cases">Mix cases</ToggleGroupItem>
-              </ToggleGroup>
-            </Setting>
-            {page === 'playground' && (
-              <>
-                <Setting label="Mix grid">
-                  <ToggleGroup variant="outline" spacing={0} value={[String(mixSize)]} onValueChange={(v) => v[0] && setState((s) => ({ ...s, mixSize: Number(v[0]) as MixSize }))}>
-                    <ToggleGroupItem value="4">4×4</ToggleGroupItem>
-                    <ToggleGroupItem value="8">8×8</ToggleGroupItem>
-                  </ToggleGroup>
-                </Setting>
-                <Setting label="Mix layout">
-                  <ToggleGroup variant="outline" spacing={0} value={[mixLayout]} onValueChange={(v) => v[0] && setState((s) => ({ ...s, mixLayout: v[0] as MixLayout }))}>
-                    <ToggleGroupItem value="random">Random</ToggleGroupItem>
-                    <ToggleGroupItem value="ordered">Ordered</ToggleGroupItem>
-                  </ToggleGroup>
-                </Setting>
-                <Button variant="ghost" onClick={() => setState(initialPlayground())}>
-                  <RotateCcw /> Reset
-                </Button>
-              </>
-            )}
-          </div>
-        </header>
-
-        {page === 'cases' && <MixCases />}
-
-        {page === 'playground' && (
-          <>
-            <div className="flex flex-wrap items-center gap-2">
-              <Tabs value={selected?.id} onValueChange={(v) => setState((s) => ({ ...s, selectedId: String(v) }))}>
-                <TabsList>
-                  {portfolios.map((p) => (
-                    <TabsTrigger key={p.id} value={p.id}>
-                      {p.name}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-              </Tabs>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  const p = newPortfolio()
-                  setState((s) => ({ ...s, portfolios: [...s.portfolios, p], selectedId: p.id }))
-                }}
-              >
-                <Plus /> Portfolio
-              </Button>
-            </div>
-
-            {selected && (
-              <MixCasePicker
-                onPick={(values) =>
-                  setState((s) => ({
-                    ...s,
-                    mixSize: 4,
-                    mixLayout: 'ordered',
-                    portfolios: s.portfolios.map((p) => (p.id === selected.id ? { ...p, plans: casePlans(values) } : p)),
-                  }))
-                }
-              />
-            )}
-
-            {selected && (
-              <PortfolioEditor
-                portfolio={selected}
-                mix={mixes.get(selected.id)!}
-                totalCells={mixSize * mixSize}
-                onChange={updatePortfolio}
-                onRemove={
-                  portfolios.length > 1
-                    ? () => setState((s) => ({ ...s, portfolios: s.portfolios.filter((p) => p.id !== selected.id), selectedId: s.portfolios.find((p) => p.id !== selected.id)!.id }))
-                    : undefined
-                }
-              />
-            )}
-          </>
         )}
-      </main>
-    </div>
+
+        <main className="flex min-w-0 flex-1 flex-col gap-6">
+          <header className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-bold">
+                Mixture <span className="font-mono text-xs font-normal text-muted-foreground">{__BUILD__}</span>
+              </h1>
+              <p className="text-sm text-muted-foreground">How a Portfolio's allocation reads as a Mix, and how each Plan's Brick looks.</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-4">
+              <Setting label="Page">
+                <ToggleGroup variant="outline" spacing={0} value={[page]} onValueChange={(v) => v[0] && setPage(v[0] as Page)}>
+                  <ToggleGroupItem value="playground">Playground</ToggleGroupItem>
+                  <ToggleGroupItem value="bricks">Bricks</ToggleGroupItem>
+                  <ToggleGroupItem value="cases">Mix cases</ToggleGroupItem>
+                </ToggleGroup>
+              </Setting>
+              {page === 'playground' && (
+                <>
+                  <Setting label="Mix grid">
+                    <ToggleGroup variant="outline" spacing={0} value={[String(mixSize)]} onValueChange={(v) => v[0] && setState((s) => ({ ...s, mixSize: Number(v[0]) as MixSize }))}>
+                      <ToggleGroupItem value="4">4×4</ToggleGroupItem>
+                      <ToggleGroupItem value="8">8×8</ToggleGroupItem>
+                    </ToggleGroup>
+                  </Setting>
+                  <Setting label="Mix layout">
+                    <ToggleGroup variant="outline" spacing={0} value={[mixLayout]} onValueChange={(v) => v[0] && setState((s) => ({ ...s, mixLayout: v[0] as MixLayout }))}>
+                      <ToggleGroupItem value="random">Random</ToggleGroupItem>
+                      <ToggleGroupItem value="ordered">Ordered</ToggleGroupItem>
+                    </ToggleGroup>
+                  </Setting>
+                  <Button variant="ghost" onClick={() => setState(initialPlayground())}>
+                    <RotateCcw /> Reset
+                  </Button>
+                </>
+              )}
+            </div>
+          </header>
+
+          {page === 'cases' && <MixCases />}
+
+          {page === 'bricks' && (
+            <PlanTypes
+              planTypes={planTypes}
+              brickGrid={brickGrid}
+              plansByType={plansByType}
+              onChange={(types) => setState((s) => ({ ...s, planTypes: types }))}
+              onGridChange={(grid) => setState((s) => ({ ...s, brickGrid: grid }))}
+            />
+          )}
+
+          {page === 'playground' && (
+            <>
+              <div className="flex flex-wrap items-center gap-2">
+                <Tabs value={selected?.id} onValueChange={(v) => setState((s) => ({ ...s, selectedId: String(v) }))}>
+                  <TabsList>
+                    {portfolios.map((p) => (
+                      <TabsTrigger key={p.id} value={p.id}>
+                        {p.name}
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
+                </Tabs>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    const p = newPortfolio(planTypes)
+                    setState((s) => ({ ...s, portfolios: [...s.portfolios, p], selectedId: p.id }))
+                  }}
+                >
+                  <Plus /> Portfolio
+                </Button>
+              </div>
+
+              {selected && (
+                <MixCasePicker
+                  onPick={(values) =>
+                    setState((s) => ({
+                      ...s,
+                      mixSize: 4,
+                      mixLayout: 'ordered',
+                      portfolios: s.portfolios.map((p) => (p.id === selected.id ? { ...p, plans: casePlans(values, planTypes) } : p)),
+                    }))
+                  }
+                />
+              )}
+
+              {selected && (
+                <PortfolioEditor
+                  portfolio={selected}
+                  planTypes={planTypes}
+                  mix={mixes.get(selected.id)!}
+                  totalCells={mixSize * mixSize}
+                  onChange={updatePortfolio}
+                  onRemove={
+                    portfolios.length > 1
+                      ? () => setState((s) => ({ ...s, portfolios: s.portfolios.filter((p) => p.id !== selected.id), selectedId: s.portfolios.find((p) => p.id !== selected.id)!.id }))
+                      : undefined
+                  }
+                />
+              )}
+            </>
+          )}
+        </main>
+      </div>
+    </BrickGridContext>
   )
 }
 
 function PortfolioEditor({
   portfolio,
+  planTypes,
   mix,
   totalCells,
   onChange,
   onRemove,
 }: {
-  portfolio: Portfolio
+  portfolio: Portfolio<ShownPlan>
+  planTypes: PlanType[]
   mix: Mix
   totalCells: number
+  /** Takes Plans as shown or as stored; only what a Plan stores is kept. */
   onChange: (p: Portfolio) => void
   onRemove?: () => void
 }) {
   const total = portfolioValue(portfolio)
   const cellsByKey = new Map<string, number>()
   for (const key of mix.cells.flat()) if (key) cellsByKey.set(key, (cellsByKey.get(key) ?? 0) + 1)
-  const setPlan = (plan: Plan) => onChange({ ...portfolio, plans: portfolio.plans.map((p) => (p.id === plan.id ? plan : p)) })
+  const setPlan = (plan: ShownPlan) => onChange({ ...portfolio, plans: portfolio.plans.map((p) => (p.id === plan.id ? plan : p)) })
 
   return (
     <div className="flex flex-col gap-6">
@@ -230,14 +258,26 @@ function PortfolioEditor({
           <PlanEditor
             key={plan.id}
             plan={plan}
+            planTypes={planTypes}
             share={total > 0 ? (Math.max(0, plan.value) / total) * 100 : 0}
             cells={cellsByKey.get(colourKey(plan.colour)) ?? 0}
             totalCells={totalCells}
             onChange={setPlan}
+            onRedraw={() => {
+              const next = newPlan(planTypes, portfolio.plans.map((p) => p.colour))
+              if (next) setPlan({ ...plan, typeId: next.typeId })
+            }}
             onRemove={() => onChange({ ...portfolio, plans: portfolio.plans.filter((p) => p.id !== plan.id) })}
           />
         ))}
-        <Button variant="outline" onClick={() => onChange({ ...portfolio, plans: [...portfolio.plans, newPlan(portfolio.plans)] })}>
+        <Button
+          variant="outline"
+          disabled={!planTypes.some((t) => t.inDraws)}
+          onClick={() => {
+            const plan = newPlan(planTypes, portfolio.plans.map((p) => p.colour))
+            if (plan) onChange({ ...portfolio, plans: [...portfolio.plans, plan] })
+          }}
+        >
           <Plus /> Add plan
         </Button>
       </div>
@@ -246,7 +286,7 @@ function PortfolioEditor({
 }
 
 /** One row per Plan colour, the way the Mix counts them. */
-function colourRows(portfolio: Portfolio, total: number) {
+function colourRows(portfolio: Portfolio<ShownPlan>, total: number) {
   const rows = new Map<string, { key: string; label: string; names: string[]; share: number }>()
   for (const plan of portfolio.plans) {
     const key = colourKey(plan.colour)

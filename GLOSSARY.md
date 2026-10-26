@@ -5,16 +5,24 @@ Finnomena dashboard design work and the tools that support it, starting with Mix
 ## Language
 
 **Plan**:
-One investment plan the customer holds, with a value in baht and a single colour.
+One investment plan the customer holds, with a value in baht. Its Plan type gives it its name, Plan colour and Brick.
 _Avoid_: Fund, product, holding
+
+**Plan type**:
+One kind of Plan a customer can hold, such as Global Multi-Income Strategy or หุ้นไทย, with a name, a Plan colour and a Brick. Random draws pick only the Plan types that are in draws.
+_Avoid_: Brick (the Plan type's drawing, not the Plan type), offering
 
 **Portfolio**:
 A named group of Plans, such as Investments, Retirement or Cash.
 _Avoid_: Port, group, bucket
 
 **Brick**:
-A Plan's icon: a single-colour Pattern-Builder Pattern on a 4×4 grid, so it is one piece joined by edges or corners and has a Brick family and a Slope.
+A Plan type's icon: a single-colour Pattern-Builder Pattern on the Brick grid, so it is one piece joined by edges or corners and has a Brick family and a Slope.
 _Avoid_: Block (one rectangle inside a Pattern, in the Pattern Builder), icon, pixel art
+
+**Brick grid**:
+The cells every Brick is drawn on: 4×4 by default, or 8×8, 16×16 or a portrait grid (4×6, 8×12) to see how Bricks read at other sizes. One setting for all Bricks.
+_Avoid_: Brick size, canvas
 
 **Slope**:
 How steeply a Brick rises from bottom-left to top-right: Flat, Half or 75%. A mountain Brick has no 75%.
@@ -57,7 +65,7 @@ In an Ordered layout, a Plan colour with more than 50% but less than 75% of the 
 _Avoid_: Majority, main colour
 
 **Plan colour**:
-The colour family and Tint a Plan is drawn in. Different Plans may share a Plan colour when they are the same kind of plan.
+The colour family and Tint a Plan type is drawn in. Different Plan types may share a Plan colour when they are alike, and the Mix then counts them as one colour.
 _Avoid_: Theme colour
 
 **Colour family**:

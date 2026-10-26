@@ -1,0 +1,51 @@
+import { colourKey, type ColourFamily, type PlanColour, type Tint } from './colours'
+import type { BrickSettings } from './brick'
+import type { Slope } from '@/vendor/fnm-core/types'
+// The plans on the plan picker (plan-select/plans), in its order, then the four that sit outside it.
+// Kept as data: some official names use words the glossary keeps out of code.
+import PLAN_TYPES from './planTypes.json'
+
+export interface PlanType {
+  id: string
+  name: string
+  colour: PlanColour
+  brick: BrickSettings
+  /** Whether random draws (a new Plan, a redrawn Plan, a loaded example) may pick it. */
+  inDraws: boolean
+}
+
+const SLOPES: Slope[] = ['half', '75', 'flat']
+
+export function defaultPlanTypes(): PlanType[] {
+  return PLAN_TYPES.map((t, i) => ({
+    id: t.id,
+    name: t.name,
+    colour: { family: t.family as ColourFamily, tint: t.tint as Tint },
+    brick: { family: 'auto', slope: SLOPES[i % SLOPES.length]!, seed: t.id },
+    inDraws: true,
+  }))
+}
+
+/**
+ * Picks `count` Plan types from those in draws, each one not picked yet. It prefers a type whose
+ * colour family isn't in `taken` or already picked, then one whose Plan colour isn't, so the Mix
+ * shows each as a colour easy to tell apart, and falls back to repeats once the pool runs out.
+ */
+export function drawPlanTypes(types: PlanType[], count: number, taken: PlanColour[] = [], random: () => number = Math.random): PlanType[] {
+  const pool = types.filter((t) => t.inDraws)
+  if (pool.length === 0) return []
+  const usedFamilies = new Set(taken.map((c) => c.family))
+  const usedColours = new Set(taken.map(colourKey))
+  const picked: PlanType[] = []
+  for (let i = 0; i < count; i++) {
+    const fresh = pool.filter((t) => !picked.includes(t))
+    const newFamily = fresh.filter((t) => !usedFamilies.has(t.colour.family))
+    const newColour = fresh.filter((t) => !usedColours.has(colourKey(t.colour)))
+    const from = [newFamily, newColour, fresh].find((f) => f.length > 0) ?? pool
+    const type = from[Math.floor(random() * from.length)]!
+    picked.push(type)
+    usedFamilies.add(type.colour.family)
+    usedColours.add(colourKey(type.colour))
+  }
+  return picked
+}

@@ -1,125 +1,89 @@
 import { useEffect, useState } from 'react'
-import type { BrickSettings } from '@/core/brick'
-import { COLOUR_FAMILIES, type ColourFamily, type PlanColour } from '@/core/colours'
+import { DEFAULT_BRICK_GRID, type BrickGrid } from '@/core/brick'
+import type { PlanColour } from '@/core/colours'
 import type { MixLayout, MixSize } from '@/core/mix'
-import { MIX_CASE_COLOURS } from '@/core/mixCases'
+import { defaultPlanTypes, drawPlanTypes, type PlanType } from '@/core/planTypes'
 import { generateRandomSeed } from '@/vendor/fnm-core/prng'
 
 export interface Plan {
   id: string
-  name: string
+  /** The Plan type it is, which gives it its name, Plan colour and Brick. */
+  typeId: string
   value: number
   /** Mock daily change in percent, for the preview only. */
   change: number
-  colour: PlanColour
-  brick: BrickSettings
 }
 
-export interface Portfolio {
+/** A Plan with its Plan type's name, Plan colour and Brick filled in. */
+export type ShownPlan = Plan & Pick<PlanType, 'name' | 'colour' | 'brick'>
+
+export interface Portfolio<P extends Plan = Plan> {
   id: string
   name: string
-  plans: Plan[]
+  plans: P[]
   mixSeed: string
 }
 
 export interface Playground {
   portfolios: Portfolio[]
+  planTypes: PlanType[]
+  brickGrid: BrickGrid
   mixSize: MixSize
   mixLayout: MixLayout
   selectedId: string
 }
 
-const STORAGE_KEY = 'mixture:v4'
+const STORAGE_KEY = 'mixture:v5'
 
 let nextId = 0
-const id = () => `${Date.now().toString(36)}-${(nextId++).toString(36)}`
+export const id = () => `${Date.now().toString(36)}-${(nextId++).toString(36)}`
 
-const plan = (name: string, value: number, change: number, family: ColourFamily, brick: Omit<BrickSettings, 'seed'>, seed: string): Plan => ({
-  id: id(),
-  name,
-  value,
-  change,
-  colour: { family, tint: 100 },
-  brick: { ...brick, seed },
-})
+const plan = (typeId: string, value: number, change = 0): Plan => ({ id: id(), typeId, value, change })
 
-/** The Portfolios on the Dashboard 3.0 Figma frame. */
+/** The Portfolios on the Dashboard 3.0 Figma frame, with today's Plan types standing in for its Plans. */
 export function initialPlayground(): Playground {
   const portfolios: Portfolio[] = [
-    {
-      id: id(),
-      name: 'Investments',
-      mixSeed: 'investments',
-      plans: [
-        plan('Definit Global Select', 185230.5, 8.36, 'purple', { family: 'rising', slope: '75' }, 'definit'),
-        plan('GMI', 78508.32, -4.32, 'green', { family: 'rising', slope: 'half' }, 'gmi'),
-        plan('Self-directed Investing', 51777.99, -2.32, 'yellow', { family: 'rising', slope: '75' }, 'self-directed'),
-      ],
-    },
-    {
-      id: id(),
-      name: 'Retirement',
-      mixSeed: 'retirement',
-      plans: [
-        plan('Tax Saving SSF', 98000, 1.12, 'blue', { family: 'auto', slope: 'half' }, 'ssf'),
-        plan('RMF for Retirement', 42356.67, 0.54, 'navy', { family: 'hanging', slope: 'flat' }, 'rmf'),
-        plan('Thai ESG', 15000, -0.81, 'yellow', { family: 'mountain', slope: 'half' }, 'thai-esg'),
-      ],
-    },
-    {
-      id: id(),
-      name: 'Cash',
-      mixSeed: 'cash',
-      plans: [
-        plan('Savings', 40000, 0, 'navy', { family: 'rising', slope: 'flat' }, 'savings'),
-        plan('Money Market', 26249.43, 0.12, 'light-grey', { family: 'auto', slope: 'half' }, 'money-market'),
-      ],
-    },
+    { id: id(), name: 'Investments', mixSeed: 'investments', plans: [plan('ggg', 185230.5, 8.36), plan('gmi', 78508.32, -4.32), plan('diy', 51777.99, -2.32)] },
+    { id: id(), name: 'Retirement', mixSeed: 'retirement', plans: [plan('tax-saving', 98000, 1.12), plan('first-million', 42356.67, 0.54), plan('thai-stocks', 15000, -0.81)] },
+    { id: id(), name: 'Cash', mixSeed: 'cash', plans: [plan('e-savings', 40000), plan('money-plus', 26249.43, 0.12)] },
   ]
-  return { portfolios, mixSize: 4, mixLayout: 'random', selectedId: portfolios[0]!.id }
+  return { portfolios, planTypes: defaultPlanTypes(), brickGrid: DEFAULT_BRICK_GRID, mixSize: 4, mixLayout: 'random', selectedId: portfolios[0]!.id }
 }
 
-/** One Plan per value in percent, worth that many thousand baht, each in a different Mix case colour picked at random. */
-export function casePlans(values: number[]): Plan[] {
-  const colours = [...MIX_CASE_COLOURS]
-  for (let i = colours.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
-    ;[colours[i], colours[j]] = [colours[j]!, colours[i]!]
-  }
-  return values.map((value, i) => ({
-    id: id(),
-    name: `Plan ${i + 1}`,
-    value: Math.round(value * 1000),
-    change: 0,
-    colour: colours[i]!,
-    brick: { family: 'auto', slope: 'half', seed: generateRandomSeed() },
-  }))
+/** The Plans whose Plan type still exists, each with that type's name, Plan colour and Brick. */
+export function showPlans(plans: Plan[], types: PlanType[]): ShownPlan[] {
+  const byId = new Map(types.map((t) => [t.id, t]))
+  return plans.flatMap((p) => {
+    const type = byId.get(p.typeId)
+    return type ? [{ ...p, name: type.name, colour: type.colour, brick: type.brick }] : []
+  })
 }
 
-/** A Plan in a colour family the Portfolio doesn't use yet, while one is free. */
-export function newPlan(siblings: Plan[] = []): Plan {
-  const all = Object.keys(COLOUR_FAMILIES) as ColourFamily[]
-  const unused = all.filter((f) => !siblings.some((p) => p.colour.family === f))
-  const families = unused.length > 0 ? unused : all
-  return {
-    id: id(),
-    name: 'New plan',
-    value: 10000,
-    change: 0,
-    colour: { family: families[Math.floor(Math.random() * families.length)]!, tint: 100 },
-    brick: { family: 'auto', slope: 'half', seed: generateRandomSeed() },
-  }
+/** Drops what `showPlans` filled in, keeping only what a Plan stores. */
+export const storedPlan = ({ id, typeId, value, change }: Plan): Plan => ({ id, typeId, value, change })
+
+/** One Plan per value in percent, worth that many thousand baht, each of a Plan type drawn at random. */
+export function casePlans(values: number[], types: PlanType[]): Plan[] {
+  const drawn = drawPlanTypes(types, values.length)
+  return drawn.map((type, i) => plan(type.id, Math.round(values[i]! * 1000)))
 }
 
-export function newPortfolio(): Portfolio {
-  return { id: id(), name: 'New portfolio', mixSeed: generateRandomSeed(), plans: [newPlan()] }
+/** A Plan of a Plan type drawn at random, in a Plan colour the Portfolio doesn't use yet while one is free; null when no type is in draws. */
+export function newPlan(types: PlanType[], siblings: PlanColour[] = []): Plan | null {
+  const [type] = drawPlanTypes(types, 1, siblings)
+  return type ? plan(type.id, 10000) : null
+}
+
+export function newPortfolio(types: PlanType[]): Portfolio {
+  const first = newPlan(types)
+  return { id: id(), name: 'New portfolio', mixSeed: generateRandomSeed(), plans: first ? [first] : [] }
 }
 
 export { generateRandomSeed }
 
 export const baht = (n: number) => `${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ฿`
 
-export const portfolioValue = (p: Portfolio) => p.plans.reduce((a, plan) => a + Math.max(0, plan.value), 0)
+export const portfolioValue = (p: { plans: { value: number }[] }) => p.plans.reduce((a, plan) => a + Math.max(0, plan.value), 0)
 
 function load(): Playground | null {
   try {

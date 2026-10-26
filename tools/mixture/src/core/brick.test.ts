@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { generateBrick, type BrickSettings } from './brick'
+import { BRICK_GRIDS, brickDefaults, generateBrick, type BrickSettings } from './brick'
 
 /** How many pieces the filled cells make, joining by edges or corners. */
 function pieces(mask: boolean[][]): number {
@@ -52,5 +52,22 @@ describe('generateBrick', () => {
   it('draws different Bricks for different seeds', () => {
     const shapes = new Set(Array.from({ length: 10 }, (_, s) => JSON.stringify(generateBrick({ family: 'auto', slope: 'half', seed: `s${s}` }))))
     expect(shapes.size).toBeGreaterThan(1)
+  })
+})
+
+describe('generateBrick on other Brick grids', () => {
+  it('keeps the 4x4 Brick its old Pattern Builder settings', () => {
+    expect(brickDefaults()).toEqual({ blockCount: 3, guidance: 60, cornerMeetLimit: 1 })
+  })
+
+  it('draws every Brick grid at its own size, in one piece', () => {
+    for (const { grid, label } of BRICK_GRIDS)
+      for (const slope of slopes)
+        for (let s = 0; s < 10; s++) {
+          const mask = generateBrick({ family: 'auto', slope, seed: `s${s}` }, grid)
+          expect(mask).toHaveLength(grid.rows)
+          expect(mask.every((row) => row.length === grid.cols)).toBe(true)
+          expect(pieces(mask), `${label}/${slope}/s${s}`).toBe(1)
+        }
   })
 })

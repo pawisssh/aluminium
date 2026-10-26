@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import type { Mix } from '@/core/mix'
-import { baht, portfolioValue, type Portfolio } from '@/playground'
+import { baht, portfolioValue, type Portfolio, type ShownPlan } from '@/playground'
 import { BrickIcon, MixIcon } from './icons'
 
 /** The Portfolios list from the Dashboard 3.0 Figma frame, drawn with the live Bricks and Mixes. */
-export function PhonePreview({ portfolios, mixes, selectedId }: { portfolios: Portfolio[]; mixes: Map<string, Mix>; selectedId: string }) {
+export function PhonePreview({ portfolios, mixes, selectedId }: { portfolios: Portfolio<ShownPlan>[]; mixes: Map<string, Mix>; selectedId: string }) {
   const [expandedId, setExpandedId] = useState<string | null>(selectedId)
   // Follow the Portfolio picked in the editor.
   const [followedId, setFollowedId] = useState(selectedId)
@@ -49,7 +49,9 @@ export function PhonePreview({ portfolios, mixes, selectedId }: { portfolios: Po
                   <ul className="px-4 pb-2">
                     {p.plans.map((plan) => (
                       <li key={plan.id} className="flex min-h-[72px] items-center gap-3 border-t border-black/5">
-                        <BrickIcon brick={plan.brick} colour={plan.colour} />
+                        <span className="flex size-9 shrink-0 items-center justify-center">
+                          <BrickIcon brick={plan.brick} colour={plan.colour} />
+                        </span>
                         <span className="flex-1 text-base text-black/65">{plan.name}</span>
                         <span className="flex flex-col items-end">
                           <span className="text-base">{baht(plan.value)}</span>
