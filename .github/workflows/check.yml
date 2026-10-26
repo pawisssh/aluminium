@@ -45,4 +45,5 @@ jobs:
       - uses: actions/checkout@v4
       - run: jq -e . .claude/*.json > /dev/null
       - run: for f in scripts/*.sh .githooks/*; do sh -n "$f"; done
+      - run: sh scripts/test-hooks.sh
       - run: for f in scripts/*.mjs tools/*/scripts/*.mjs; do node --check "$f"; done
