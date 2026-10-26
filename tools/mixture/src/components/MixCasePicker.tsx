@@ -7,7 +7,7 @@ const COUNTS = [...new Set(MIX_CASES.map((c) => c.sizes.length))]
 
 /**
  * Picks how many Plan colours, then a Mix case with that many; the Portfolio being edited gets
- * random values in percent that snap back to it, in random Plan colours. Picking the same case again draws new ones.
+ * random values in percent that snap back to it, as Plan types drawn at random. Picking the same case again draws new ones.
  */
 export function MixCasePicker({ onPick }: { onPick: (values: number[]) => void }) {
   const [colours, setColours] = useState(4)
@@ -18,7 +18,7 @@ export function MixCasePicker({ onPick }: { onPick: (values: number[]) => void }
       <div>
         <h2 className="text-sm font-medium">Mix cases</h2>
         <p className="text-xs text-muted-foreground">
-          Pick how many Plan colours, then a Mix case: this Portfolio gets random values that a 4×4 Ordered Mix snaps back to it, in random Plan colours. Pick it again for new ones.
+          Pick how many Plan colours, then a Mix case: this Portfolio gets random values that a 4×4 Ordered Mix snaps back to it, as Plan types drawn at random. Pick it again for new ones.
         </p>
       </div>
       <ToggleGroup
