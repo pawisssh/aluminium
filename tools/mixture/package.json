@@ -11,6 +11,7 @@
     "test": "vitest run",
     "typecheck": "tsc -b --noEmit",
     "probe": "vitest run --silent=false",
+    "vendor:sync": "node scripts/vendor-sync.mjs",
     "check": "tsc -b --noEmit && vitest run && oxlint --deny-warnings && node ../../scripts/check-glossary.mjs"
   },
   "dependencies": {
