@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { DEFAULT_BRICK_GRID, type BrickGrid } from '@/core/brick'
-import type { ColourFamily, PlanColour } from '@/core/colours'
+import type { PlanColour } from '@/core/colours'
 import type { MixLayout, MixSize } from '@/core/mix'
 import { defaultPlanTypes, drawPlanTypes, type PlanType } from '@/core/planTypes'
 import { generateRandomSeed } from '@/vendor/fnm-core/prng'
@@ -33,7 +33,7 @@ export interface Playground {
   selectedId: string
 }
 
-const STORAGE_KEY = 'mixture:v4'
+const STORAGE_KEY = 'mixture:v5'
 
 let nextId = 0
 export const id = () => `${Date.now().toString(36)}-${(nextId++).toString(36)}`
@@ -62,32 +62,10 @@ export function showPlans(plans: Plan[], types: PlanType[]): ShownPlan[] {
 /** Drops what `showPlans` filled in, keeping only what a Plan stores. */
 export const storedPlan = ({ id, typeId, value, change }: Plan): Plan => ({ id, typeId, value, change })
 
-export interface MixExample {
-  name: string
-  size: MixSize
-  /** Each Plan's colour family and share of the Portfolio in percent, largest first. */
-  shares: [ColourFamily, number][]
-}
-
-/** Portfolios that show how an Ordered Mix places its colours in the two Sides. */
-export const MIX_EXAMPLES: MixExample[] = [
-  { name: 'Right Side first', size: 4, shares: [['navy', 37.5], ['magenta', 25], ['blue', 25], ['yellow', 12.5]] },
-  { name: 'Turning rows', size: 4, shares: [['blue', 37.5], ['navy', 31.25], ['magenta', 18.75], ['yellow', 12.5]] },
-  { name: 'Tie', size: 4, shares: [['blue', 31.25], ['navy', 31.25], ['yellow', 18.75], ['magenta', 18.75]] },
-  { name: 'Four equal', size: 4, shares: [['blue', 25], ['navy', 25], ['magenta', 25], ['yellow', 25]] },
-  { name: 'Spill', size: 4, shares: [['blue', 43.75], ['navy', 18.75], ['magenta', 18.75], ['yellow', 18.75]] },
-  { name: 'One-cell spill', size: 4, shares: [['blue', 43.75], ['navy', 43.75], ['yellow', 12.5]] },
-  { name: 'Skip ahead', size: 4, shares: [['blue', 37.5], ['navy', 31.25], ['green', 25], ['yellow', 6.25]] },
-  { name: 'Exactly 50%', size: 4, shares: [['blue', 50], ['navy', 31.25], ['magenta', 12.5], ['yellow', 6.25]] },
-  { name: 'Past 75%', size: 4, shares: [['blue', 81.25], ['navy', 12.5], ['magenta', 6.25]] },
-  { name: 'Five colours', size: 8, shares: [['blue', 46.875], ['navy', 21.875], ['magenta', 15.625], ['yellow', 9.375], ['violet', 6.25]] },
-  { name: 'Tie, five colours', size: 8, shares: [['blue', 31.25], ['navy', 31.25], ['magenta', 18.75], ['yellow', 12.5], ['violet', 6.25]] },
-]
-
-/** One Plan per share of a Mix example, worth that many thousand baht, of a Plan type drawn at random. */
-export function examplePlans(example: MixExample, types: PlanType[]): Plan[] {
-  const drawn = drawPlanTypes(types, example.shares.length)
-  return drawn.map((type, i) => plan(type.id, example.shares[i]![1] * 1000))
+/** One Plan per value in percent, worth that many thousand baht, each of a Plan type drawn at random. */
+export function casePlans(values: number[], types: PlanType[]): Plan[] {
+  const drawn = drawPlanTypes(types, values.length)
+  return drawn.map((type, i) => plan(type.id, Math.round(values[i]! * 1000)))
 }
 
 /** A Plan of a Plan type drawn at random, in a Plan colour the Portfolio doesn't use yet while one is free; null when no type is in draws. */

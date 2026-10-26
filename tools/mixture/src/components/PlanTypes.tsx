@@ -1,6 +1,6 @@
 import { Dices, Plus, Trash2 } from 'lucide-react'
 import { BRICK_GRIDS, brickDefaults, type BrickGrid, type BrickSettings } from '@/core/brick'
-import { COLOUR_FAMILIES, TINTS, type ColourFamily, type Tint } from '@/core/colours'
+import { COLOUR_FAMILIES, colourHex, familyTints, type ColourFamily, type Tint } from '@/core/colours'
 import type { PlanType } from '@/core/planTypes'
 import { generateRandomSeed, id } from '@/playground'
 import { blockCountRangeFor } from '@/vendor/fnm-core/generator'
@@ -140,7 +140,7 @@ function PlanTypeCard({
         </div>
         <div className="flex min-w-0 flex-1 flex-col gap-2">
           <Input aria-label="Plan type name" value={type.name} onChange={(e) => onChange({ ...type, name: e.target.value })} />
-          <Select items={FAMILY_ITEMS} value={type.colour.family} onValueChange={(f) => f && onChange({ ...type, colour: { ...type.colour, family: f as ColourFamily } })}>
+          <Select items={FAMILY_ITEMS} value={type.colour.family} onValueChange={(f) => f && onChange({ ...type, colour: { family: f as ColourFamily, tint: familyTints(f as ColourFamily).includes(type.colour.tint) ? type.colour.tint : 100 } })}>
             <SelectTrigger aria-label="Colour family" className="w-full">
               <SelectValue />
             </SelectTrigger>
@@ -160,9 +160,9 @@ function PlanTypeCard({
             value={[String(type.colour.tint)]}
             onValueChange={(v) => v[0] && onChange({ ...type, colour: { ...type.colour, tint: Number(v[0]) as Tint } })}
           >
-            {TINTS.map((t) => (
+            {familyTints(type.colour.family).map((t) => (
               <ToggleGroupItem key={t} value={String(t)} aria-label={`Tint ${t}`} className="flex-1">
-                <span className="size-3 rounded-sm" style={{ background: COLOUR_FAMILIES[type.colour.family].tints[t] }} />
+                <span className="size-3 rounded-sm" style={{ background: colourHex({ family: type.colour.family, tint: t }) }} />
                 <span className="text-xs">{t}</span>
               </ToggleGroupItem>
             ))}
