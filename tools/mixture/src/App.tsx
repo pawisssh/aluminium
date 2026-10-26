@@ -33,7 +33,9 @@ export default function App() {
       <main className="flex min-w-0 flex-1 flex-col gap-6">
         <header className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold">Mixture</h1>
+            <h1 className="text-2xl font-bold">
+              Mixture <span className="font-mono text-xs font-normal text-muted-foreground">{__BUILD__}</span>
+            </h1>
             <p className="text-sm text-muted-foreground">How a Portfolio's allocation reads as a Mix, and how each Plan's Brick looks.</p>
           </div>
           <div className="flex flex-wrap items-center gap-4">
