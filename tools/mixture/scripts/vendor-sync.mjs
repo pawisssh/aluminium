@@ -18,7 +18,15 @@ const commonDir = execFileSync('git', ['rev-parse', '--path-format=absolute', '-
 const block = process.env.BLOCK_REPO ?? path.resolve(path.dirname(commonDir.trim()), '../block')
 const git = (...args) => execFileSync('git', ['-C', block, ...args], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 })
 
-git('fetch', '--quiet', 'origin')
+// The check needs only the README's commit, so it carries on with the last fetch when fetching
+// fails, as on the CI runner, whose service has no keychain access for GitHub credentials.
+let fetched = true
+try {
+  execFileSync('git', ['-C', block, 'fetch', '--quiet', 'origin'], { stdio: ['ignore', 'ignore', check ? 'ignore' : 'inherit'] })
+} catch (error) {
+  if (!check) throw error
+  fetched = false
+}
 const ref = check ? readFileSync(readme, 'utf8').match(HASH)[2] : (process.argv.slice(2).find((arg) => !arg.startsWith('--')) ?? 'origin/main')
 const sha = git('rev-parse', '--verify', `${ref}^{commit}`).trim()
 
@@ -42,7 +50,7 @@ const changed = [...wanted].filter(([file, content]) => before.has(file) && befo
 const added = [...wanted.keys()].filter((file) => !before.has(file))
 const removed = [...before.keys()].filter((file) => !wanted.has(file))
 const behind = Number(git('rev-list', '--count', `${sha}..origin/main`).trim())
-const behindLine = behind === 0 ? 'Up to date with origin/main.' : `${behind} commits behind origin/main; run npm run vendor:sync to update.`
+const behindLine = `${behind === 0 ? 'Up to date with origin/main' : `${behind} commits behind origin/main; run npm run vendor:sync to update`}${fetched ? '' : ' (as of block\'s last fetch; fetching failed)'}.`
 
 if (check) {
   const differs = [...changed.map((f) => `edited ${f}`), ...added.map((f) => `missing ${f}`), ...removed.map((f) => `extra ${f}`)]
