@@ -14,5 +14,6 @@ npm run vendor:check     # vendored fnm-core matches block at its README hash (C
 ```
 
 - `src/core/mix.ts`: `buildMix` turns Plan values into a Mix (largest-remainder cell counts, Random layout keeps each Plan colour in one edge-joined piece; Ordered fills the left and right halves row by row, left half first, and gives a Dominant Plan colour exactly the left half).
+- `src/components/MixCases.tsx`: the Mix cases page (`#cases`) draws one Mix per set of colour families at Tint 100, picked by how many Plan colours it holds, with the case count for each.
 - `src/core/brick.ts`: `generateBrick` draws a 4×4 Brick with the Pattern Builder's generator, vendored in `src/vendor/fnm-core` (see its README).
 - Plan colours come from neon `theme/tokens/colors.json`; the light theme from `theme.json`.
