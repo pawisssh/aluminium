@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { DEFAULT_BRICK_GRID, type BrickGrid } from '@/core/brick'
-import { BRICK_TEMPLATES, keepsPatternRules, templateBrick } from '@/core/brickTemplates'
+import { BRICK_TEMPLATES, ruleProblems, templateBrick } from '@/core/brickTemplates'
 import type { PlanColour } from '@/core/colours'
 import type { MixLayout, MixSize } from '@/core/mix'
 import { defaultPlanTypes, drawPlanTypes, type PlanType } from '@/core/planTypes'
@@ -53,8 +53,8 @@ export function initialPlayground(): Playground {
   return { portfolios, planTypes: defaultPlanTypes(), templatesInDraws: defaultTemplatesInDraws(), brickGrid: DEFAULT_BRICK_GRID, mixSize: 4, mixLayout: 'random', selectedId: portfolios[0]!.id }
 }
 
-/** Every Brick template that keeps the Pattern rules on the default Brick grid. */
-export const defaultTemplatesInDraws = () => BRICK_TEMPLATES.filter((t) => keepsPatternRules(templateBrick(t, DEFAULT_BRICK_GRID))).map((t) => t.key)
+/** Every Brick template that keeps the rules on the default Brick grid. */
+export const defaultTemplatesInDraws = () => BRICK_TEMPLATES.filter((t) => ruleProblems(templateBrick(t, DEFAULT_BRICK_GRID), t.family, t.slope).length === 0).map((t) => t.key)
 
 /** The Plans whose Plan type still exists, each with that type's name, Plan colour and Brick. */
 export function showPlans(plans: Plan[], types: PlanType[]): ShownPlan[] {

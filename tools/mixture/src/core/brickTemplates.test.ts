@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { BRICK_GRIDS, generateBrick } from './brick'
-import { BRICK_TEMPLATES, cellsKey, drawBrickTemplates, templateSettings } from './brickTemplates'
+import { BRICK_TEMPLATES, cellsKey, drawBrickTemplates, galleryPicks, ruleProblems, templateBrick, templateSettings } from './brickTemplates'
 
 describe('BRICK_TEMPLATES', () => {
   it('lists each Reference Pattern with a Brick family and Slope once', () => {
@@ -35,5 +35,30 @@ describe('drawBrickTemplates', () => {
   it('draws nothing when no template is in draws', () => {
     expect(drawBrickTemplates([], 2)).toEqual([])
     expect(drawBrickTemplates(['gone/half/0:0'], 2)).toEqual([])
+  })
+})
+
+describe('ruleProblems', () => {
+  it('tags some templates on a 4×4 Brick grid, as the gallery does', () => {
+    const tagged = BRICK_TEMPLATES.filter((t) => ruleProblems(templateBrick(t, BRICK_GRIDS[0]!.grid), t.family, t.slope).length > 0)
+    expect(tagged.length).toBeGreaterThan(0)
+    expect(tagged.length).toBeLessThan(BRICK_TEMPLATES.length)
+  })
+
+  it('tags a hanging Brick that reaches the bottom', () => {
+    const cells = [[true, true, true, true], [true, true, true, false], [true, true, false, false], [true, false, false, false]]
+    expect(ruleProblems(cells, 'hanging', 'half')).toContain('touches bottom')
+  })
+})
+
+describe('galleryPicks', () => {
+  it('reads the gallery export, leaving out References this core lacks', () => {
+    const [a, b] = BRICK_TEMPLATES
+    const json = JSON.stringify({ version: 3, bricks: [a, b, { family: 'rising', slope: 'half', reference: 'nope' }].map(({ family, slope, reference }) => ({ family, slope, reference, sizes: {} })) })
+    expect(galleryPicks(json)).toEqual({ keys: [a!.key, b!.key], picks: 3 })
+  })
+
+  it('refuses JSON that is not a gallery export', () => {
+    expect(() => galleryPicks('{}')).toThrow()
   })
 })

@@ -1,7 +1,7 @@
-import { useMemo } from 'react'
-import { RotateCcw } from 'lucide-react'
+import { useMemo, useRef, useState } from 'react'
+import { RotateCcw, Upload } from 'lucide-react'
 import type { BrickGrid } from '@/core/brick'
-import { BRICK_TEMPLATES, cellsKey, keepsPatternRules, templateBrick, templateSettings, type BrickTemplate } from '@/core/brickTemplates'
+import { BRICK_TEMPLATES, cellsKey, galleryPicks, ruleProblems, templateBrick, templateSettings, type BrickTemplate } from '@/core/brickTemplates'
 import type { PlanColour } from '@/core/colours'
 import { defaultTemplatesInDraws } from '@/playground'
 import { Button } from '@/components/ui/button'
@@ -18,7 +18,8 @@ interface Card {
   n: number
   /** The number of the first card in its group drawn with the same cells on this Brick grid. */
   sameAs?: number
-  keepsRules: boolean
+  /** The rules its cells break on this Brick grid. */
+  problems: string[]
 }
 
 /**
@@ -45,12 +46,25 @@ export function BrickTemplates({
       const cells = templateBrick(template, brickGrid)
       const key = cellsKey(cells)
       const first = cards.find((c) => cellsKey(templateBrick(c.template, brickGrid)) === key)
-      cards.push({ template, n: cards.length + 1, sameAs: first?.n, keepsRules: keepsPatternRules(cells) })
+      cards.push({ template, n: cards.length + 1, sameAs: first?.n, problems: ruleProblems(cells, template.family, template.slope) })
       byGroup.set(group, cards)
     }
     return [...byGroup.values()]
   }, [brickGrid])
   const all = groups.flat()
+  const file = useRef<HTMLInputElement>(null)
+  const [imported, setImported] = useState('')
+
+  const importGallery = async (picked: File | undefined) => {
+    if (!picked) return
+    try {
+      const { keys, picks } = galleryPicks(await picked.text())
+      set(keys)
+      setImported(`Imported ${keys.length} of ${picks} gallery picks${keys.length < picks ? '; the rest are References this core does not have' : ''}.`)
+    } catch (error) {
+      setImported(`Could not import ${picked.name}: ${error instanceof Error ? error.message : error}`)
+    }
+  }
 
   const set = (keys: Iterable<string>) => {
     const wanted = new Set(keys)
@@ -67,7 +81,7 @@ export function BrickTemplates({
             <span className="text-sm text-muted-foreground">
               {inDraws.size} of {all.length} in draws
             </span>
-            <Button variant="outline" onClick={() => set(all.filter((c) => c.keepsRules).map((c) => c.template.key))}>
+            <Button variant="outline" onClick={() => set(all.filter((c) => c.problems.length === 0).map((c) => c.template.key))}>
               Keep the rules
             </Button>
             <Button variant="outline" title="Leave out a Brick template drawn the same as an earlier one in its group" onClick={() => toggle(all.filter((c) => c.sameAs).map((c) => c.template.key), false)}>
@@ -76,6 +90,19 @@ export function BrickTemplates({
             <Button variant="outline" onClick={() => set([])}>
               None
             </Button>
+            <Button variant="outline" title="The JSON block's Brick gallery exports: its picks become the templates in draws" onClick={() => file.current?.click()}>
+              <Upload /> Import gallery picks
+            </Button>
+            <input
+              ref={file}
+              type="file"
+              accept="application/json,.json"
+              className="hidden"
+              onChange={(e) => {
+                void importGallery(e.target.files?.[0])
+                e.target.value = ''
+              }}
+            />
             <Button variant="ghost" onClick={() => onChange(defaultTemplatesInDraws())}>
               <RotateCcw /> Reset
             </Button>
@@ -83,8 +110,10 @@ export function BrickTemplates({
         </div>
         <p className="text-xs text-muted-foreground">
           Each Brick template is one Reference Pattern laid on the Brick grid by area, the way block's Brick gallery draws it. The Bricks tab's Brick, Shuffle all Bricks and new
-          Plan type buttons pick only templates in draws; with none in draws they generate a Brick from a new seed. Click a template to put it in draws or leave it out.
+          Plan type buttons pick only templates in draws; with none in draws they generate a Brick from a new seed. Click a template to put it in draws or leave it out, or import
+          the picks exported from the gallery. Rule checks are the gallery's, on this Brick grid.
         </p>
+        {imported && <p className="text-sm">{imported}</p>}
       </section>
 
       {groups.map((cards) => {
@@ -131,7 +160,7 @@ function TemplateCard({ card, inDraws, onToggle }: { card: Card; inDraws: boolea
       </span>
       <span className="tabular-nums">#{card.n}</span>
       {card.sameAs && <span className="text-muted-foreground">same as #{card.sameAs}</span>}
-      {!card.keepsRules && <span className="text-negative">breaks rules</span>}
+      {card.problems.length > 0 && <span className="text-center text-negative">{card.problems.join(', ')}</span>}
     </button>
   )
 }

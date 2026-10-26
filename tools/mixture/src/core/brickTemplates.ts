@@ -1,5 +1,5 @@
-import { checkPatternRules } from '@/vendor/fnm-core/patternRules'
-import { AREA_RESAMPLE_SET, LATEST_REFERENCE_SET, referencePatternsFor } from '@/vendor/fnm-core/referencePatterns'
+import { checkPatternRules, COVERAGE_LIMIT } from '@/vendor/fnm-core/patternRules'
+import { AREA_RESAMPLE_SET, LATEST_REFERENCE_SET, referencePatternsFor, slopeShapeProblem } from '@/vendor/fnm-core/referencePatterns'
 import { templateMask } from '@/vendor/fnm-core/templateMode'
 import type { Block, PatternFamily, Slope } from '@/vendor/fnm-core/types'
 import type { BrickGrid, BrickSettings } from './brick'
@@ -37,11 +37,36 @@ export function templateBrick(template: BrickTemplate, grid: BrickGrid): boolean
   return templateMask(template.mask, { ...grid, cellW: 1, cellH: 1 }, AREA_RESAMPLE_SET)
 }
 
-/** Whether cells keep the Pattern rules: one piece, touching an edge, covering at most 75% of the grid. */
-export function keepsPatternRules(cells: boolean[][]): boolean {
-  const grid = { cols: cells[0]?.length ?? 0, rows: cells.length, cellW: 1, cellH: 1 }
+/**
+ * The rules a template's cells break, as block's Brick gallery tags them (ruleProblems in
+ * apps/web/src/gallery/brickShapes.ts): the Pattern rules, the Brick family's anchor (rising stands on
+ * the bottom, hanging hangs from the top without reaching the bottom, mountain keeps off the left
+ * edge), the 75% top-right corner and the Slope's shape. Empty when it keeps them all.
+ */
+export function ruleProblems(cells: boolean[][], family: BrickTemplateFamily, slope: Slope): string[] {
+  const rows = cells.length
+  const cols = cells[0]?.length ?? 0
+  const grid = { cols, rows, cellW: 1, cellH: 1 }
   const blocks: Block[] = cells.flatMap((row, r) => row.flatMap((on, c) => (on ? [{ id: `${r}-${c}`, col: c, row: r, w: 1, h: 1, tint: 0 }] : [])))
-  return blocks.length > 0 && checkPatternRules(blocks, grid).ok
+  if (blocks.length === 0) return ['empty']
+  const problems: string[] = []
+  const { violations } = checkPatternRules(blocks, grid)
+  if (violations.some((v) => v.startsWith('disconnected'))) problems.push('two pieces')
+  if (violations.some((v) => v.startsWith('noEdge'))) problems.push('no edge')
+  const covered = blocks.length / (cols * rows)
+  if (covered > COVERAGE_LIMIT[1]) problems.push('too much cover')
+  if (covered < COVERAGE_LIMIT[0]) problems.push('too little cover')
+  const top = cells[0]!.some(Boolean)
+  const bottom = cells[rows - 1]!.some(Boolean)
+  if (family === 'rising' && !bottom) problems.push('misses bottom')
+  if (family === 'hanging' && !top) problems.push('misses top')
+  if (family === 'hanging' && bottom) problems.push('touches bottom')
+  if (family === 'mountain' && cells.some((row) => row[0])) problems.push('touches left')
+  if (slope === '75' && !cells[0]![cols - 1]) problems.push('misses top-right')
+  const shape = slopeShapeProblem(blocks, grid, slope)
+  if (shape === 'shallow75') problems.push('too shallow for 75%')
+  if (shape === 'steps') problems.push('too many steps')
+  return problems
 }
 
 export const cellsKey = (cells: boolean[][]) => cells.map((row) => row.map((on) => (on ? '#' : '.')).join('')).join('/')
@@ -59,4 +84,15 @@ export function drawBrickTemplates(keys: readonly string[], count: number, rando
     picked.push(left.splice(Math.floor(random() * left.length), 1)[0]!)
   }
   return picked
+}
+
+/**
+ * The keys of the Brick templates block's Brick gallery exported as picks (its JSON, version 3), and how
+ * many picks it held; a pick of a Reference this vendored core doesn't have is left out.
+ */
+export function galleryPicks(json: string): { keys: string[]; picks: number } {
+  const parsed = JSON.parse(json) as { bricks?: { family?: string; slope?: string; reference?: string }[] }
+  if (!Array.isArray(parsed.bricks)) throw new Error('Not a Brick gallery export: no bricks list')
+  const keys = parsed.bricks.map((b) => `${b.family}/${b.slope}/${b.reference}`).filter((k) => byKey.has(k))
+  return { keys: [...new Set(keys)], picks: parsed.bricks.length }
 }
