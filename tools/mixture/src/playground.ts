@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { BrickSettings } from '@/core/brick'
 import { COLOUR_FAMILIES, type ColourFamily, type PlanColour } from '@/core/colours'
-import type { MixMode, MixSize } from '@/core/mix'
+import type { MixLayout, MixSize } from '@/core/mix'
 import { generateRandomSeed } from '@/vendor/fnm-core/prng'
 
 export interface Plan {
@@ -24,11 +24,11 @@ export interface Portfolio {
 export interface Playground {
   portfolios: Portfolio[]
   mixSize: MixSize
-  mixMode: MixMode
+  mixLayout: MixLayout
   selectedId: string
 }
 
-const STORAGE_KEY = 'mixture:v2'
+const STORAGE_KEY = 'mixture:v3'
 
 let nextId = 0
 const id = () => `${Date.now().toString(36)}-${(nextId++).toString(36)}`
@@ -75,7 +75,7 @@ export function initialPlayground(): Playground {
       ],
     },
   ]
-  return { portfolios, mixSize: 4, mixMode: 'random', selectedId: portfolios[0]!.id }
+  return { portfolios, mixSize: 4, mixLayout: 'random', selectedId: portfolios[0]!.id }
 }
 
 /** A Plan in a colour family the Portfolio doesn't use yet, while one is free. */

@@ -13,16 +13,32 @@ A named group of Plans, such as Investments, Retirement or Cash.
 _Avoid_: Port, group, bucket
 
 **Brick**:
-A Plan's icon: a single-colour Pattern-Builder Pattern on a 4×4 grid, so it is one piece joined by edges or corners and has a family (rising, hanging, mountain) and a Slope.
+A Plan's icon: a single-colour Pattern-Builder Pattern on a 4×4 grid, so it is one piece joined by edges or corners and has a Brick family and a Slope.
 _Avoid_: Block (one rectangle inside a Pattern, in the Pattern Builder), icon, pixel art
+
+**Slope**:
+How steeply a Brick rises from bottom-left to top-right: Flat, Half or 75%. A mountain Brick has no 75%.
+_Avoid_: angle, steepness
+
+**Brick family**:
+The shape a Brick's Pattern follows: rising, hanging or mountain. A Brick whose family is left unchosen (Auto) takes whichever one its seed picks.
+_Avoid_: family (on its own), auto family
 
 **Mix**:
 A Portfolio's icon: a square grid (4×4 or 8×8) filled with Plan colours, where each colour takes a share of cells matching its share of the Portfolio's value.
 _Avoid_: Heatmap, treemap, allocation chart
 
+**Mix layout**:
+How a Mix places its Plan colours: Random (each colour one edge-joined piece, placed by the Mix's seed) or Ordered (largest colour first, laid out the same way every time).
+_Avoid_: mode
+
 **Plan colour**:
 The colour family and Tint a Plan is drawn in. Different Plans may share a Plan colour when they are the same kind of plan.
 _Avoid_: Theme colour
+
+**Colour family**:
+One of the twelve neon hues a Plan colour comes from, such as Purple or Navy.
+_Avoid_: family (on its own), hue
 
 **Tint**:
 One of the solid steps of a colour family: 100, 75, 50 or 25. Plans mostly use 100.

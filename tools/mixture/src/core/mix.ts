@@ -2,7 +2,7 @@ import { createRng } from '@/vendor/fnm-core/prng'
 import { colourKey, type PlanColour } from './colours'
 
 export type MixSize = 4 | 8
-export type MixMode = 'random' | 'ordered'
+export type MixLayout = 'random' | 'ordered'
 
 export interface MixSlice {
   value: number
@@ -18,11 +18,11 @@ export interface Mix {
 
 const RANDOM_ATTEMPTS = 50
 
-export function buildMix(slices: MixSlice[], size: MixSize, options: { mode: MixMode; seed: string }): Mix {
-  const { shares, hidden } = allocate(slices, size * size, options.mode)
+export function buildMix(slices: MixSlice[], size: MixSize, options: { layout: MixLayout; seed: string }): Mix {
+  const { shares, hidden } = allocate(slices, size * size, options.layout)
   const rng = createRng(options.seed)
   let cells: (string | null)[][] | null = null
-  for (let i = 0; options.mode === 'random' && !cells && i < RANDOM_ATTEMPTS; i++) cells = growRegions(shares, size, rng)
+  for (let i = 0; options.layout === 'random' && !cells && i < RANDOM_ATTEMPTS; i++) cells = growRegions(shares, size, rng)
   return { cells: cells ?? orderedLayout(shares, size), hiddenColours: hidden }
 }
 
@@ -127,7 +127,7 @@ interface Share {
  * colour with more than half the value but less than three quarters takes exactly the left half,
  * and the other colours split the right half.
  */
-function allocate(slices: MixSlice[], total: number, mode: MixMode): { shares: Share[]; hidden: number } {
+function allocate(slices: MixSlice[], total: number, layout: MixLayout): { shares: Share[]; hidden: number } {
   const byKey = new Map<string, number>()
   for (const s of slices) {
     if (s.value > 0) byKey.set(colourKey(s.colour), (byKey.get(colourKey(s.colour)) ?? 0) + s.value)
@@ -135,7 +135,7 @@ function allocate(slices: MixSlice[], total: number, mode: MixMode): { shares: S
   const ranked = [...byKey].sort((a, b) => b[1] - a[1])
   const [top] = ranked
   const topShare = top ? top[1] / ranked.reduce((a, [, value]) => a + value, 0) : 0
-  if (mode === 'ordered' && topShare > 0.5 && topShare < 0.75) {
+  if (layout === 'ordered' && topShare > 0.5 && topShare < 0.75) {
     const rest = split(ranked.slice(1), total / 2)
     return { shares: [{ key: top![0], cells: total / 2 }, ...rest.shares], hidden: rest.hidden }
   }
