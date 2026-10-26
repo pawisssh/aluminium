@@ -37,7 +37,7 @@ The Mix layout that grows each Plan colour, largest first, from a random cell in
 _Avoid_: Scatter
 
 **Ordered layout**:
-The Mix layout that places Plan colours largest first, the same way every time, in two Sides. Every colour but the largest sits whole in one Side, so the largest is the only one that can span both, and each colour is one edge-joined piece. A 4×4 Ordered layout counts its Plan colours (up to 11; any smaller ones are left out), then draws the Mix case with as many colours that sits nearest their values, keeping equal values as equal pieces where such a case exists.
+The Mix layout that places Plan colours largest first, the same way every time, in two Sides, each with a Turning fill. Every colour but the largest sits whole in one Side, so the largest is the only one that can span both, and each colour is one edge-joined piece. A 4×4 Ordered layout counts its Plan colours (up to 11; any smaller ones are left out), then draws the Mix case with as many colours that sits nearest their values, keeping equal values as equal pieces where such a case exists.
 _Avoid_: Snake
 
 **Side**:
@@ -47,6 +47,10 @@ _Avoid_: column, half (Half is a Slope)
 **Mix case**:
 One way a 4×4 Mix can be cut up when every Plan colour is a single 1×1, 2×1, 2×2, 2×3 or 2×4 piece (a Side's width by its rows), placed largest first in the left Side while it fits, then the right. Only the largest colour can be bigger, from 75% up: it takes the whole left Side and a 2×2 to 2×4 piece at the top of the right.
 _Avoid_: scenario, permutation
+
+**Turning fill**:
+How an Ordered layout fills each Side: row by row from the top, each row running the opposite way to the one above, so a colour that reaches a row's end carries on into the row below.
+_Avoid_: Snake, zigzag
 
 **Dominant Plan colour**:
 In an Ordered layout, a Plan colour with more than 50% but less than 75% of the Portfolio's value. It takes exactly the left Side, and the other colours split the right Side by value. From 75% up, a colour takes its true share (in a 4×4 Mix, the nearest Mix case piece). With ten or more Plan colours no Mix case has room for a whole left Side, so a 4×4 Mix draws the nearest case without it.
