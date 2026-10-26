@@ -4,7 +4,7 @@ A playground for how a Portfolio's allocation reads as a **Mix** (a 4×4 or 8×8
 
 ```bash
 npm install
-npm run dev        # http://localhost:5173
+npm run dev        # http://localhost:5173; the browser console logs which checkout it serves
 npm test           # core logic: src/core
 npm run typecheck
 npm run check      # typecheck, tests, lint, glossary terms: what CI runs
