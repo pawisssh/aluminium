@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { buildMix } from './mix'
+import { MIX_CASES } from './mixCases'
 import type { PlanColour } from './colours'
 
 const purple: PlanColour = { family: 'purple', tint: 100 }
@@ -62,7 +63,7 @@ describe('buildMix', () => {
     expect(counts(buildMix(slices).cells)).toEqual({ 'purple-100': 14, 'green-100': 1, 'yellow-100': 1 })
   })
 
-  it('keeps each Plan colour in one piece joined by edges, and every colour but the largest in one Side', () => {
+  it('keeps each Plan colour in one piece joined by edges, draws only kept Mix cases, and every colour but the largest in one Side', () => {
     const palette = [purple, green, yellow, { family: 'blue', tint: 100 }, { family: 'navy', tint: 100 }] as const
     for (let trial = 0; trial < 200; trial++) {
       // A spread of portfolios: 1 to 5 colours with uneven values.
@@ -71,6 +72,7 @@ describe('buildMix', () => {
       // The largest value, the first listed on a tie.
       const largest = slices.reduce((a, b) => (b.value > a.value ? b : a))
       const mix = buildMix(slices)
+      expect(MIX_CASES.map((c) => c.number)).toContain(mix.mixCase)
       for (const key of new Set(mix.cells.flat())) {
         expect(pieces(mix.cells, key!), `${key} in trial ${trial}`).toBe(1)
         if (key === `${largest.colour.family}-100`) continue
@@ -89,19 +91,18 @@ describe('buildMix', () => {
     const a = buildMix(slices)
     expect(buildMix(slices)).toEqual(a)
     expect(a.cells[0]![0]).toBe('purple-100')
-    expect(a.mixCase).toBeGreaterThanOrEqual(1)
-    expect(a.mixCase).toBeLessThanOrEqual(52)
+    expect(MIX_CASES.map((c) => c.number)).toContain(a.mixCase)
   })
 
   const short = (cells: (string | null)[][]) => cells.map((row) => row.map((key) => key![0]!.toUpperCase()).join(''))
 
   // Values are percentages, written after family initials; the first listed wins a tie.
   it.each([
-    ['lands exactly on a case', 'B25 N25 O25 Y25', 14, ['BBOO', 'BBOO', 'NNYY', 'NNYY']],
+    ['lands exactly on a case', 'B37.5 N25 O25 Y12.5', 13, ['BBNN', 'BBNN', 'BBOO', 'YYOO']],
     ['snaps each colour to the nearest piece', 'B40 N30 O20 Y10', 13, ['BBNN', 'BBNN', 'BBOO', 'YYOO']],
-    ['keeps equal values as equal pieces', 'B31.25 N31.25 Y18.75 O18.75', 12, ['BBNN', 'BBNN', 'BBNN', 'YYOO']],
+    ['keeps equal values as equal pieces', 'B31 N31 O31 Y3.5 G3.5', 21, ['BBOO', 'BBOO', 'NNYY', 'NNGG']],
     ['gives a Dominant Plan colour exactly the left Side', 'B59 G25 Y16', 8, ['BBGG', 'BBGG', 'BBYY', 'BBYY']],
-    ['holds a Dominant Plan colour to the left Side even near 75%', 'B70 N30', 4, ['BBNN', 'BBNN', 'BBNN', 'BBNN']],
+    ['spans a Dominant Plan colour when no case with as many colours gives it just the left Side', 'B70 N30', 3, ['BBBB', 'BBBB', 'BBNN', 'BBNN']],
     ['spans the largest colour onto the top of the right Side from 75%', 'B80 G20', 3, ['BBBB', 'BBBB', 'BBGG', 'BBGG']],
     ['gives a tiny Plan colour a single cell', 'B97 N2 Y1', 5, ['BBBB', 'BBBB', 'BBBB', 'BBNY']],
   ] as const)('%s (%s)', (_, spec, mixCase, rows) => {
@@ -119,7 +120,7 @@ describe('buildMix', () => {
     expect(new Set(mix.cells.flat()).size).toBe(11)
     expect(mix.cells.flat()).not.toContain('light-grey-75')
     expect(mix.hiddenColours).toBe(1)
-    expect(mix.mixCase).toBeLessThanOrEqual(52)
+    expect(MIX_CASES.map((c) => c.number)).toContain(mix.mixCase)
   })
 
   it('leaves every cell empty when the Plans have no value', () => {

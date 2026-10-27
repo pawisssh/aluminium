@@ -40,7 +40,7 @@ The shape a Brick's Pattern follows: rising, hanging or mountain. A Brick whose 
 _Avoid_: family (on its own), auto family
 
 **Mix**:
-A Portfolio's icon: a 4×4 grid filled with Plan colours, drawn as the Mix case nearest the Portfolio's values, the same way every time. It counts its Plan colours (up to 11; any smaller ones are left out), then picks the Mix case with as many colours whose pieces sit nearest their shares, keeping equal values as equal pieces where such a case exists. So a Mix is always one of the 52 Mix cases.
+A Portfolio's icon: a 4×4 grid filled with Plan colours, drawn as the Mix case nearest the Portfolio's values, the same way every time. It counts its Plan colours (up to 11; any smaller ones are left out), then picks the Mix case with as many colours whose pieces sit nearest their shares, keeping equal values as equal pieces where such a case exists. So a Mix is always one of the 32 kept Mix cases.
 _Avoid_: Heatmap, treemap, allocation chart
 
 **Side**:
@@ -49,11 +49,11 @@ _Avoid_: half (Half is a Slope)
 _Avoid in code_: column
 
 **Mix case**:
-One way a 4×4 Mix can be cut up when every Plan colour is a single 1×1, 2×1, 2×2, 2×3 or 2×4 piece (a Side's width by its rows), placed largest first in the left Side while it fits, then the right, each Side filled row by row from its top-left. Only the largest colour can be bigger, from 75% up: it takes the whole left Side and a 2×2 to 2×4 piece at the top of the right. There are 52 with up to 11 Plan colours.
+One way a 4×4 Mix can be cut up when every Plan colour is a single 1×1, 2×1, 2×2, 2×3 or 2×4 piece (a Side's width by its rows), placed largest first in the left Side while it fits, then the right, each Side filled row by row from its top-left. Only the largest colour can be bigger, from 75% up: it takes the whole left Side and a 2×2 to 2×4 piece at the top of the right. There are 52 with up to 11 Plan colours; 32 are kept, each under its number among the 52, and only those are drawn or offered.
 _Avoid_: scenario, permutation, Snake, Scatter
 
 **Dominant Plan colour**:
-In a Mix, a Plan colour with more than 50% but less than 75% of the Portfolio's value. It takes exactly the left Side, and the other colours split the right Side by value. From 75% up, a colour takes the nearest Mix case piece to its true share. With ten or more Plan colours no Mix case has room for a whole left Side, so the Mix draws the nearest case without it.
+In a Mix, a Plan colour with more than 50% but less than 75% of the Portfolio's value. It takes exactly the left Side, and the other colours split the right Side by value. From 75% up, a colour takes the nearest Mix case piece to its true share. Where no kept Mix case with as many colours gives it the whole left Side (two Plan colours, or ten or more), the Mix draws the nearest case without it.
 _Avoid_: Majority, main colour
 
 **Plan colour**:

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createRng } from '@/vendor/fnm-core/prng'
-import { caseValues, layoutCase, MIX_CASES, mixCases, nearestMixCase, partitions } from './mixCases'
+import { caseValues, DROPPED_CASES, layoutCase, MIX_CASES, mixCases, nearestMixCase, partitions } from './mixCases'
 
 /** Each colour's bounding box as [width, rows], with whether it fills the box and stays in one Side. */
 function pieces(cells: number[][]) {
@@ -28,17 +28,24 @@ function splitsIntoSides(sizes: number[]): boolean {
 describe('mixCases', () => {
   const cases = MIX_CASES
 
-  it('counts 52 cases with up to 11 Plan colours', () => {
+  it('counts 52 cases with up to 11 Plan colours, and keeps 32 of them', () => {
+    const all = mixCases(11)
+    expect(all).toHaveLength(52)
+    expect(all.map((c) => c.number)).toEqual(all.map((_, i) => i + 1))
     const byColours: Record<number, number> = {}
     for (const c of cases) byColours[c.sizes.length] = (byColours[c.sizes.length] ?? 0) + 1
-    expect(cases).toHaveLength(52)
-    expect(byColours).toEqual({ 1: 1, 2: 3, 3: 4, 4: 6, 5: 7, 6: 7, 7: 6, 8: 6, 9: 5, 10: 4, 11: 3 })
-    expect(cases.filter((c) => c.sizes.length === 2).map((c) => c.sizes)).toEqual([[14, 2], [12, 4], [8, 8]])
-    expect(cases.map((c) => c.number)).toEqual(cases.map((_, i) => i + 1))
+    expect(cases).toHaveLength(32)
+    expect(byColours).toEqual({ 1: 1, 2: 2, 3: 4, 4: 4, 5: 6, 6: 4, 7: 3, 8: 3, 9: 3, 10: 1, 11: 1 })
+    expect(cases.filter((c) => c.sizes.length === 2).map((c) => c.sizes)).toEqual([[14, 2], [12, 4]])
+  })
+
+  it('keeps each case its number from the full list, leaving out the dropped ones', () => {
+    expect(cases).toEqual(mixCases(11).filter((c) => !DROPPED_CASES.has(c.number)))
+    expect(cases.some((c) => DROPPED_CASES.has(c.number))).toBe(false)
   })
 
   it('numbers cases the same however many colours it lists', () => {
-    expect(mixCases(16).slice(0, cases.length)).toEqual(cases)
+    expect(mixCases(16).slice(0, 52)).toEqual(mixCases(11))
   })
 
   it('cuts every case into the allowed pieces, each whole in one Side but a spanning largest', () => {

@@ -82,8 +82,14 @@ export function* partitions(total: number, max: number): Generator<number[]> {
   }
 }
 
-/** Every Mix case there are Mix case colours for, as numbered on the Mix cases page. */
-export const MIX_CASES = mixCases(MIX_CASE_COLOURS.length)
+/** Mix cases taken out of the list by design review, by their number in `mixCases`. */
+export const DROPPED_CASES = new Set([4, 12, 14, 18, 24, 25, 26, 30, 31, 34, 36, 37, 40, 42, 45, 46, 47, 49, 50, 51])
+
+/**
+ * Every Mix case there are Mix case colours for but the dropped ones, keeping its number from
+ * `mixCases`, as on the Mix cases page. Each colour count still has at least one.
+ */
+export const MIX_CASES = mixCases(MIX_CASE_COLOURS.length).filter((c) => !DROPPED_CASES.has(c.number))
 
 /** A piece's share of the Mix, such as "37.5%". */
 export const pieceShare = (cells: number) => `${(cells / CELLS) * 100}%`
