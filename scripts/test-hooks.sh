@@ -25,10 +25,10 @@ git config user.email test@example.com
 git add -A && git commit -qm "Start" >/dev/null 2>&1
 
 # commit-msg
-expect fail 'commit-msg fails on an Avoid word' git commit -q --allow-empty -m "Draw the Snake"
-expect pass 'commit-msg passes a plain message' git commit -q --allow-empty -m "Draw the Ordered layout"
+expect fail 'commit-msg fails on an Avoid word' git commit -q --allow-empty -m "Draw the Heatmap"
+expect pass 'commit-msg passes a plain message' git commit -q --allow-empty -m "Draw the Mix case"
 expect pass 'commit-msg passes an _Avoid in code_ word' git commit -q --allow-empty -m "Sort the table by column"
-printf 'Draw the Ordered layout\n# ------------------------ >8 ------------------------\nSnake\n' >"$tmp/msg"
+printf 'Draw the Mix case\n# ------------------------ >8 ------------------------\nHeatmap\n' >"$tmp/msg"
 expect pass 'commit-msg ignores the diff under the scissors line' sh .githooks/commit-msg "$tmp/msg"
 git switch -q -c snake-fill && git commit -q --allow-empty -m "On a branch" >/dev/null 2>&1 && git switch -q main
 git commit -q --allow-empty -m "On main" >/dev/null 2>&1

@@ -18,7 +18,7 @@ export function MixCasePicker({ onPick }: { onPick: (values: number[]) => void }
       <div>
         <h2 className="text-sm font-medium">Mix cases</h2>
         <p className="text-xs text-muted-foreground">
-          Pick how many Plan colours, then a Mix case: this Portfolio gets random values that a 4×4 Ordered Mix snaps back to it, as Plan types drawn at random. Pick it again for new ones.
+          Pick how many Plan colours, then a Mix case: this Portfolio gets random values that its Mix snaps back to that case, as Plan types drawn at random. Pick it again for new ones.
         </p>
       </div>
       <ToggleGroup

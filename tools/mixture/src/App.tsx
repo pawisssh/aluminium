@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Dices, Plus, RotateCcw, TriangleAlert } from 'lucide-react'
+import { Plus, RotateCcw, TriangleAlert } from 'lucide-react'
 import { colourFromKey, colourHex, colourKey, COLOUR_FAMILIES } from '@/core/colours'
-import { buildMix, type Mix, type MixLayout, type MixSize } from '@/core/mix'
+import { buildMix, type Mix } from '@/core/mix'
 import type { PlanType } from '@/core/planTypes'
-import { baht, casePlans, generateRandomSeed, initialPlayground, newPlan, newPortfolio, portfolioValue, showPlans, storedPlan, usePlayground, type Portfolio, type ShownPlan } from '@/playground'
+import { baht, casePlans, initialPlayground, newPlan, newPortfolio, portfolioValue, showPlans, storedPlan, usePlayground, type Portfolio, type ShownPlan } from '@/playground'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -35,14 +35,11 @@ function usePage() {
 export default function App() {
   const [state, setState] = usePlayground()
   const [page, setPage] = usePage()
-  const { planTypes, brickGrid, mixSize, mixLayout, selectedId } = state
+  const { planTypes, brickGrid, selectedId } = state
   const portfolios = useMemo(() => state.portfolios.map((p) => ({ ...p, plans: showPlans(p.plans, planTypes) })), [state.portfolios, planTypes])
   const selected = portfolios.find((p) => p.id === selectedId) ?? portfolios[0]
 
-  const mixes = useMemo(
-    () => new Map<string, Mix>(portfolios.map((p) => [p.id, buildMix(p.plans, mixSize, { layout: mixLayout, seed: p.mixSeed })])),
-    [portfolios, mixSize, mixLayout],
-  )
+  const mixes = useMemo(() => new Map<string, Mix>(portfolios.map((p) => [p.id, buildMix(p.plans)])), [portfolios])
 
   const plansByType = useMemo(() => {
     const counts = new Map<string, number>()
@@ -79,23 +76,9 @@ export default function App() {
                 </ToggleGroup>
               </Setting>
               {page === 'playground' && (
-                <>
-                  <Setting label="Mix grid">
-                    <ToggleGroup variant="outline" spacing={0} value={[String(mixSize)]} onValueChange={(v) => v[0] && setState((s) => ({ ...s, mixSize: Number(v[0]) as MixSize }))}>
-                      <ToggleGroupItem value="4">4×4</ToggleGroupItem>
-                      <ToggleGroupItem value="8">8×8</ToggleGroupItem>
-                    </ToggleGroup>
-                  </Setting>
-                  <Setting label="Mix layout">
-                    <ToggleGroup variant="outline" spacing={0} value={[mixLayout]} onValueChange={(v) => v[0] && setState((s) => ({ ...s, mixLayout: v[0] as MixLayout }))}>
-                      <ToggleGroupItem value="random">Random</ToggleGroupItem>
-                      <ToggleGroupItem value="ordered">Ordered</ToggleGroupItem>
-                    </ToggleGroup>
-                  </Setting>
-                  <Button variant="ghost" onClick={() => setState(initialPlayground())}>
-                    <RotateCcw /> Reset
-                  </Button>
-                </>
+                <Button variant="ghost" onClick={() => setState(initialPlayground())}>
+                  <RotateCcw /> Reset
+                </Button>
               )}
             </div>
           </header>
@@ -141,8 +124,6 @@ export default function App() {
                   onPick={(values) =>
                     setState((s) => ({
                       ...s,
-                      mixSize: 4,
-                      mixLayout: 'ordered',
                       portfolios: s.portfolios.map((p) => (p.id === selected.id ? { ...p, plans: casePlans(values, planTypes) } : p)),
                     }))
                   }
@@ -154,7 +135,6 @@ export default function App() {
                   portfolio={selected}
                   planTypes={planTypes}
                   mix={mixes.get(selected.id)!}
-                  totalCells={mixSize * mixSize}
                   onChange={updatePortfolio}
                   onRemove={
                     portfolios.length > 1
@@ -175,14 +155,12 @@ function PortfolioEditor({
   portfolio,
   planTypes,
   mix,
-  totalCells,
   onChange,
   onRemove,
 }: {
   portfolio: Portfolio<ShownPlan>
   planTypes: PlanType[]
   mix: Mix
-  totalCells: number
   /** Takes Plans as shown or as stored; only what a Plan stores is kept. */
   onChange: (p: Portfolio) => void
   onRemove?: () => void
@@ -199,10 +177,7 @@ function PortfolioEditor({
           <div className="rounded-lg bg-muted p-3">
             <MixIcon cells={mix.cells} size={192} />
           </div>
-          <Button size="sm" variant="secondary" onClick={() => onChange({ ...portfolio, mixSeed: generateRandomSeed() })}>
-            <Dices /> Shuffle Mix
-          </Button>
-          <span className="text-xs text-muted-foreground">{mix.mixCase ? `Mix case #${mix.mixCase}` : `seed ${portfolio.mixSeed}`}</span>
+          {mix.mixCase && <span className="text-xs text-muted-foreground">Mix case #{mix.mixCase}</span>}
         </div>
         <div className="flex flex-1 flex-col gap-3">
           <div className="flex gap-2">
@@ -237,9 +212,9 @@ function PortfolioEditor({
                     </td>
                     <td className="py-1.5 text-right tabular-nums">{row.share.toFixed(2)}%</td>
                     <td className="py-1.5 text-right tabular-nums">
-                      {cells}/{totalCells}
+                      {cells}/{MIX_CELLS}
                     </td>
-                    <td className="py-1.5 text-right tabular-nums">{((cells / totalCells) * 100).toFixed(2)}%</td>
+                    <td className="py-1.5 text-right tabular-nums">{((cells / MIX_CELLS) * 100).toFixed(2)}%</td>
                   </tr>
                 )
               })}
@@ -247,7 +222,7 @@ function PortfolioEditor({
           </table>
           {mix.hiddenColours > 0 && (
             <p className="flex items-center gap-2 text-sm text-negative">
-              <TriangleAlert className="size-4" /> {mix.hiddenColours} Plan colour{mix.hiddenColours > 1 ? 's are' : ' is'} too small to fit {mix.mixCase ? `a Mix case, which holds up to ${MIX_CASE_COLOURS.length} Plan colours,` : `in ${totalCells} cells`} and left out.
+              <TriangleAlert className="size-4" /> {mix.hiddenColours} Plan colour{mix.hiddenColours > 1 ? 's are' : ' is'} too small to fit a Mix case, which holds up to {MIX_CASE_COLOURS.length} Plan colours, and left out.
             </p>
           )}
         </div>
@@ -261,7 +236,7 @@ function PortfolioEditor({
             planTypes={planTypes}
             share={total > 0 ? (Math.max(0, plan.value) / total) * 100 : 0}
             cells={cellsByKey.get(colourKey(plan.colour)) ?? 0}
-            totalCells={totalCells}
+            totalCells={MIX_CELLS}
             onChange={setPlan}
             onRedraw={() => {
               const next = newPlan(planTypes, portfolio.plans.map((p) => p.colour))
@@ -284,6 +259,9 @@ function PortfolioEditor({
     </div>
   )
 }
+
+/** Cells in a Mix. */
+const MIX_CELLS = 16
 
 /** One row per Plan colour, the way the Mix counts them. */
 function colourRows(portfolio: Portfolio<ShownPlan>, total: number) {
