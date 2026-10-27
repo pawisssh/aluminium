@@ -98,13 +98,13 @@ describe('buildMix', () => {
 
   // Values are percentages, written after family initials; the first listed wins a tie.
   it.each([
-    ['lands exactly on a case', 'B37.5 N25 O25 Y12.5', 13, ['BBNN', 'BBNN', 'BBOO', 'YYOO']],
-    ['snaps each colour to the nearest piece', 'B40 N30 O20 Y10', 13, ['BBNN', 'BBNN', 'BBOO', 'YYOO']],
-    ['keeps equal values as equal pieces', 'B31 N31 O31 Y3.5 G3.5', 21, ['BBOO', 'BBOO', 'NNYY', 'NNGG']],
-    ['gives a Dominant Plan colour exactly the left Side', 'B59 G25 Y16', 8, ['BBGG', 'BBGG', 'BBYY', 'BBYY']],
+    ['lands exactly on a case', 'B37.5 N25 O25 Y12.5', 11, ['BBNN', 'BBNN', 'BBOO', 'YYOO']],
+    ['snaps each colour to the nearest piece', 'B40 N30 O20 Y10', 11, ['BBNN', 'BBNN', 'BBOO', 'YYOO']],
+    ['keeps equal values as equal pieces', 'B31 N31 O31 Y3.5 G3.5', 17, ['BBOO', 'BBOO', 'NNYY', 'NNGG']],
+    ['gives a Dominant Plan colour exactly the left Side', 'B59 G25 Y16', 7, ['BBGG', 'BBGG', 'BBYY', 'BBYY']],
     ['spans a Dominant Plan colour when no case with as many colours gives it just the left Side', 'B70 N30', 3, ['BBBB', 'BBBB', 'BBNN', 'BBNN']],
     ['spans the largest colour onto the top of the right Side from 75%', 'B80 G20', 3, ['BBBB', 'BBBB', 'BBGG', 'BBGG']],
-    ['gives a tiny Plan colour a single cell', 'B97 N2 Y1', 5, ['BBBB', 'BBBB', 'BBBB', 'BBNY']],
+    ['gives a tiny Plan colour a single cell', 'B97 N2 Y1', 4, ['BBBB', 'BBBB', 'BBBB', 'BBNY']],
   ] as const)('%s (%s)', (_, spec, mixCase, rows) => {
     const families = { B: 'blue', N: 'navy', O: 'orange', Y: 'yellow', G: 'green' } as const
     const slices = spec.split(' ').map((s) => ({ value: Number(s.slice(1)), colour: { family: families[s[0] as keyof typeof families], tint: 100 as const } }))

@@ -49,7 +49,7 @@ _Avoid_: half (Half is a Slope)
 _Avoid in code_: column
 
 **Mix case**:
-One way a 4×4 Mix can be cut up when every Plan colour is a single 1×1, 2×1, 2×2, 2×3 or 2×4 piece (a Side's width by its rows), placed largest first in the left Side while it fits, then the right, each Side filled row by row from its top-left. Only the largest colour can be bigger, from 75% up: it takes the whole left Side and a 2×2 to 2×4 piece at the top of the right. There are 52 with up to 11 Plan colours; 32 are kept, each under its number among the 52, and only those are drawn or offered.
+One way a 4×4 Mix can be cut up when every Plan colour is a single 1×1, 2×1, 2×2, 2×3 or 2×4 piece (a Side's width by its rows), placed largest first in the left Side while it fits, then the right, each Side filled row by row from its top-left. Only the largest colour can be bigger, from 75% up: it takes the whole left Side and a 2×2 to 2×4 piece at the top of the right. Of the 52 with up to 11 Plan colours, 32 are kept, numbered 1 to 32, and only those are drawn or offered.
 _Avoid_: scenario, permutation, Snake, Scatter
 
 **Dominant Plan colour**:

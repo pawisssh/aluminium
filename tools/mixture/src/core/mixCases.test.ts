@@ -28,24 +28,24 @@ function splitsIntoSides(sizes: number[]): boolean {
 describe('mixCases', () => {
   const cases = MIX_CASES
 
-  it('counts 52 cases with up to 11 Plan colours, and keeps 32 of them', () => {
-    const all = mixCases(11)
-    expect(all).toHaveLength(52)
-    expect(all.map((c) => c.number)).toEqual(all.map((_, i) => i + 1))
+  it('counts 32 cases with up to 11 Plan colours', () => {
     const byColours: Record<number, number> = {}
     for (const c of cases) byColours[c.sizes.length] = (byColours[c.sizes.length] ?? 0) + 1
     expect(cases).toHaveLength(32)
     expect(byColours).toEqual({ 1: 1, 2: 2, 3: 4, 4: 4, 5: 6, 6: 4, 7: 3, 8: 3, 9: 3, 10: 1, 11: 1 })
     expect(cases.filter((c) => c.sizes.length === 2).map((c) => c.sizes)).toEqual([[14, 2], [12, 4]])
+    expect(cases.map((c) => c.number)).toEqual(cases.map((_, i) => i + 1))
   })
 
-  it('keeps each case its number from the full list, leaving out the dropped ones', () => {
-    expect(cases).toEqual(mixCases(11).filter((c) => !DROPPED_CASES.has(c.number)))
-    expect(cases.some((c) => DROPPED_CASES.has(c.number))).toBe(false)
+  it('leaves out the 20 dropped cases', () => {
+    expect(DROPPED_CASES.size).toBe(20)
+    for (const c of cases) expect(DROPPED_CASES.has(c.sizes.join('-'))).toBe(false)
+    // Each dropped case is one the pieces can make.
+    for (const key of DROPPED_CASES) expect(layoutCase(key.split('-').map(Number))).not.toBeNull()
   })
 
   it('numbers cases the same however many colours it lists', () => {
-    expect(mixCases(16).slice(0, 52)).toEqual(mixCases(11))
+    expect(mixCases(16).slice(0, cases.length)).toEqual(cases)
   })
 
   it('cuts every case into the allowed pieces, each whole in one Side but a spanning largest', () => {
