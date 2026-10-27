@@ -13,7 +13,6 @@
     "typecheck": "tsc -b --noEmit",
     "probe": "vitest run --silent=false",
     "brick-stats": "node scripts/brick-stats.mjs",
-    "mix-stats": "node scripts/mix-stats.mjs",
     "vendor:sync": "node scripts/vendor-sync.mjs",
     "vendor:check": "node scripts/vendor-sync.mjs --check",
     "precheck": "sh ../../scripts/install-tool-deps.sh",

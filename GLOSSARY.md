@@ -40,36 +40,20 @@ The shape a Brick's Pattern follows: rising, hanging or mountain. A Brick whose 
 _Avoid_: family (on its own), auto family
 
 **Mix**:
-A Portfolio's icon: a square grid (4×4 or 8×8) filled with Plan colours, where each colour takes a share of cells matching its share of the Portfolio's value.
+A Portfolio's icon: a 4×4 grid filled with Plan colours, drawn as the Mix case nearest the Portfolio's values, the same way every time. It counts its Plan colours (up to 11; any smaller ones are left out), then picks the Mix case with as many colours whose pieces sit nearest their shares, keeping equal values as equal pieces where such a case exists. So a Mix is always one of the 52 Mix cases.
 _Avoid_: Heatmap, treemap, allocation chart
 
-**Mix layout**:
-How a Mix places its Plan colours: a Random layout or an Ordered layout.
-_Avoid in code_: mode
-
-**Random layout**:
-The Mix layout that grows each Plan colour, largest first, from a random cell into neighbouring cells, so each colour is one edge-joined piece. The Mix's seed picks the cells.
-_Avoid_: Scatter
-
-**Ordered layout**:
-The Mix layout that places Plan colours largest first, the same way every time, in two Sides, each with a Turning fill. Every colour but the largest sits whole in one Side, so the largest is the only one that can span both, and each colour is one edge-joined piece. A 4×4 Ordered layout counts its Plan colours (up to 11; any smaller ones are left out), then draws the Mix case with as many colours that sits nearest their values, keeping equal values as equal pieces where such a case exists.
-_Avoid_: Snake
-
 **Side**:
-One of the two halves, left and right, that an Ordered layout fills. When colours tie on value, the one listed first counts as the larger.
+One of the two halves, left and right, that a Mix case fills. When colours tie on value, the one listed first counts as the larger.
 _Avoid_: half (Half is a Slope)
 _Avoid in code_: column
 
 **Mix case**:
-One way a 4×4 Mix can be cut up when every Plan colour is a single 1×1, 2×1, 2×2, 2×3 or 2×4 piece (a Side's width by its rows), placed largest first in the left Side while it fits, then the right. Only the largest colour can be bigger, from 75% up: it takes the whole left Side and a 2×2 to 2×4 piece at the top of the right.
-_Avoid_: scenario, permutation
-
-**Turning fill**:
-How an Ordered layout fills each Side: row by row from the top, each row running the opposite way to the one above, so a colour that reaches a row's end carries on into the row below.
-_Avoid_: Snake, zigzag
+One way a 4×4 Mix can be cut up when every Plan colour is a single 1×1, 2×1, 2×2, 2×3 or 2×4 piece (a Side's width by its rows), placed largest first in the left Side while it fits, then the right, each Side filled row by row from its top-left. Only the largest colour can be bigger, from 75% up: it takes the whole left Side and a 2×2 to 2×4 piece at the top of the right. There are 52 with up to 11 Plan colours.
+_Avoid_: scenario, permutation, Snake, Scatter
 
 **Dominant Plan colour**:
-In an Ordered layout, a Plan colour with more than 50% but less than 75% of the Portfolio's value. It takes exactly the left Side, and the other colours split the right Side by value. From 75% up, a colour takes its true share (in a 4×4 Mix, the nearest Mix case piece). With ten or more Plan colours no Mix case has room for a whole left Side, so a 4×4 Mix draws the nearest case without it.
+In a Mix, a Plan colour with more than 50% but less than 75% of the Portfolio's value. It takes exactly the left Side, and the other colours split the right Side by value. From 75% up, a colour takes the nearest Mix case piece to its true share. With ten or more Plan colours no Mix case has room for a whole left Side, so the Mix draws the nearest case without it.
 _Avoid_: Majority, main colour
 
 **Plan colour**:

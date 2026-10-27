@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { DEFAULT_BRICK_GRID, type BrickGrid } from '@/core/brick'
 import type { PlanColour } from '@/core/colours'
-import type { MixLayout, MixSize } from '@/core/mix'
 import { defaultPlanTypes, drawPlanTypes, type PlanType } from '@/core/planTypes'
 import { generateRandomSeed } from '@/vendor/fnm-core/prng'
 
@@ -21,15 +20,12 @@ export interface Portfolio<P extends Plan = Plan> {
   id: string
   name: string
   plans: P[]
-  mixSeed: string
 }
 
 export interface Playground {
   portfolios: Portfolio[]
   planTypes: PlanType[]
   brickGrid: BrickGrid
-  mixSize: MixSize
-  mixLayout: MixLayout
   selectedId: string
 }
 
@@ -43,11 +39,11 @@ const plan = (typeId: string, value: number, change = 0): Plan => ({ id: id(), t
 /** The Portfolios on the Dashboard 3.0 Figma frame, with today's Plan types standing in for its Plans. */
 export function initialPlayground(): Playground {
   const portfolios: Portfolio[] = [
-    { id: id(), name: 'Investments', mixSeed: 'investments', plans: [plan('ggg', 185230.5, 8.36), plan('gmi', 78508.32, -4.32), plan('diy', 51777.99, -2.32)] },
-    { id: id(), name: 'Retirement', mixSeed: 'retirement', plans: [plan('tax-saving', 98000, 1.12), plan('first-million', 42356.67, 0.54), plan('thai-stocks', 15000, -0.81)] },
-    { id: id(), name: 'Cash', mixSeed: 'cash', plans: [plan('e-savings', 40000), plan('money-plus', 26249.43, 0.12)] },
+    { id: id(), name: 'Investments', plans: [plan('ggg', 185230.5, 8.36), plan('gmi', 78508.32, -4.32), plan('diy', 51777.99, -2.32)] },
+    { id: id(), name: 'Retirement', plans: [plan('tax-saving', 98000, 1.12), plan('first-million', 42356.67, 0.54), plan('thai-stocks', 15000, -0.81)] },
+    { id: id(), name: 'Cash', plans: [plan('e-savings', 40000), plan('money-plus', 26249.43, 0.12)] },
   ]
-  return { portfolios, planTypes: defaultPlanTypes(), brickGrid: DEFAULT_BRICK_GRID, mixSize: 4, mixLayout: 'random', selectedId: portfolios[0]!.id }
+  return { portfolios, planTypes: defaultPlanTypes(), brickGrid: DEFAULT_BRICK_GRID, selectedId: portfolios[0]!.id }
 }
 
 /** The Plans whose Plan type still exists, each with that type's name, Plan colour and Brick. */
@@ -76,7 +72,7 @@ export function newPlan(types: PlanType[], siblings: PlanColour[] = []): Plan | 
 
 export function newPortfolio(types: PlanType[]): Portfolio {
   const first = newPlan(types)
-  return { id: id(), name: 'New portfolio', mixSeed: generateRandomSeed(), plans: first ? [first] : [] }
+  return { id: id(), name: 'New portfolio', plans: first ? [first] : [] }
 }
 
 export { generateRandomSeed }
