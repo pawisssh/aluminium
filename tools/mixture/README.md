@@ -1,6 +1,6 @@
 # Mixture
 
-A playground for how a Portfolio's allocation reads as a **Mix** (a 4×4 grid of Plan colours, always one of the 52 Mix cases) and how each Plan type's **Brick** looks. Terms are defined in the repo's [`GLOSSARY.md`](../../GLOSSARY.md).
+A playground for how a Portfolio's allocation reads as a **Mix** (a 4×4 grid of Plan colours, always one of the 32 kept Mix cases) and how each Plan type's **Brick** looks. Terms are defined in the repo's [`GLOSSARY.md`](../../GLOSSARY.md).
 
 ```bash
 npm install
@@ -14,7 +14,7 @@ npm run vendor:check     # vendored fnm-core matches block at its README hash (C
 ```
 
 - `src/core/mix.ts`: `buildMix` turns Plan values into a Mix: it ranks the Plan colours by value, keeps up to 11, and draws the Mix case nearest their values (`nearestMixCase`).
-- `src/core/mixCases.ts`: `mixCases` lists every Mix case, a 4×4 Mix cut into 1×1, 2×1, 2×2, 2×3 and 2×4 pieces, largest first in the left Side while it fits, then the right, the largest alone able to take the left Side and the top of the right, from 75% up; `MIX_CASES` numbers the ones with up to 11 colours (one per Mix case colour) as the page shows them, `nearestMixCase` picks the one with as many colours nearest a set of values, and `caseValues` draws random values that snap back to a case (the Playground's Mix case picker, `src/components/MixCasePicker.tsx`, loads them into a Portfolio); the Mix cases page (`#cases`, `src/components/MixCases.tsx`) draws them.
+- `src/core/mixCases.ts`: `mixCases` lists every Mix case, a 4×4 Mix cut into 1×1, 2×1, 2×2, 2×3 and 2×4 pieces, largest first in the left Side while it fits, then the right, the largest alone able to take the left Side and the top of the right, from 75% up, all but `DROPPED_CASES` (20 of the 52 with up to 11 colours); `MIX_CASES` numbers the 32 left 1 to 32, one colour per Mix case colour, as the page shows them, `nearestMixCase` picks the one with as many colours nearest a set of values, and `caseValues` draws random values that snap back to a case (the Playground's Mix case picker, `src/components/MixCasePicker.tsx`, loads them into a Portfolio); the Mix cases page (`#cases`, `src/components/MixCases.tsx`) draws them.
 - `src/core/brick.ts`: `generateBrick` draws a Brick on the Brick grid (4×4 by default; 8×8, 16×16, 4×6 and 8×12 on the Bricks tab) with the Pattern Builder's generator, vendored in `src/vendor/fnm-core` (see its README).
 - `src/core/planTypes.ts`: the Plan types every Plan is one of, seeded from `planTypes.json` (the plan picker's plans, then หุ้นไทย, หุ้นต่างประเทศ, บัญชี e-Savings and หุ้นกู้), each with its Brick settings (matched to its artwork on the plan picker where it has one) and whether it's in draws. `drawPlanTypes` picks the ones in draws for a new Plan, the Plan's Draw button and a picked Mix case. The Bricks tab edits each type's name, Plan colour and Brick; every Plan of that type follows.
 - `src/core/planCovers.ts`: each Plan type's Plan Cover (`planCovers.json`, 16×16 cells from Figma), `coverMatch` to score a Brick against it, and `closestBricks` to search seeds for the best ones. On the Bricks tab each card shows its Plan Cover and match, and Closest Bricks lists picks to apply. Copy planTypes.json copies every Plan type in the file's format, to paste over `src/core/planTypes.json` as the new defaults.

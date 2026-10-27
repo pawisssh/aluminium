@@ -16,7 +16,7 @@ export const MIX_CASE_COLOURS: PlanColour[] = [
 ]
 
 export interface MixCase {
-  /** Where it comes in `mixCases`, from 1: fewest colours first, then larger pieces first. */
+  /** Where it comes in `mixCases`, from 1: fewest colours first, then larger pieces first, the dropped ones skipped. */
   number: number
   /** Cells per Plan colour, largest first. */
   sizes: number[]
@@ -30,13 +30,23 @@ export interface MixCase {
  */
 const SPANNING_SIZES = [16, 14, 12] as const
 
-/** Every 4×4 Mix case with up to `maxColours` Plan colours, fewest colours first. */
+/**
+ * Mix cases taken out by design review, by their sizes. Of the 52 with up to 11 Plan colours, 32
+ * are left, and each colour count still has at least one.
+ */
+export const DROPPED_CASES = new Set([
+  '8-8', '6-6-2-2', '4-4-4-4', '6-6-2-1-1', '6-6-1-1-1-1', '6-4-2-2-1-1', '6-2-2-2-2-2', '6-4-2-1-1-1-1', '6-2-2-2-2-1-1', '4-2-2-2-2-2-2',
+  '6-4-1-1-1-1-1-1', '6-2-2-2-1-1-1-1', '2-2-2-2-2-2-2-2', '6-2-2-1-1-1-1-1-1', '2-2-2-2-2-2-2-1-1', '6-2-1-1-1-1-1-1-1-1', '4-4-1-1-1-1-1-1-1-1',
+  '2-2-2-2-2-2-1-1-1-1', '6-1-1-1-1-1-1-1-1-1-1', '4-2-2-1-1-1-1-1-1-1-1',
+])
+
+/** Every 4×4 Mix case with up to `maxColours` Plan colours but the dropped ones, fewest colours first. */
 export function mixCases(maxColours: number): MixCase[] {
   const cases: Omit<MixCase, 'number'>[] = []
   for (const largest of [...SPANNING_SIZES, ...PIECE_SIZES]) {
     for (const rest of partitions(SIZE * SIZE - largest, Math.min(largest, PER_SIDE))) {
       const sizes = [largest, ...rest]
-      const cells = sizes.length <= maxColours ? layoutCase(sizes) : null
+      const cells = sizes.length <= maxColours && !DROPPED_CASES.has(sizes.join('-')) ? layoutCase(sizes) : null
       if (cells) cases.push({ sizes, cells })
     }
   }
