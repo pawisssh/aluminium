@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Written by `npm run bricks:export` from the stored Bricks, on demand.
+/brickVectors.json
