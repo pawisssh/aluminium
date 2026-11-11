@@ -1,10 +1,13 @@
+import { useContext } from 'react'
 import { Dices, Trash2 } from 'lucide-react'
+import { planTypeBrick } from '@/core/pickedBricks'
 import type { PlanType } from '@/core/planTypes'
 import type { ShownPlan } from '@/playground'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Slider } from '@/components/ui/slider'
+import { BrickGridContext } from './brickGrid'
 import { BrickIcon } from './icons'
 
 export function PlanEditor({
@@ -29,6 +32,7 @@ export function PlanEditor({
   onRedraw: () => void
   onRemove: () => void
 }) {
+  const brickGrid = useContext(BrickGridContext)
   const sliderMax = Math.max(500000, Math.ceil(plan.value / 100000) * 100000)
   const typeItems = planTypes.map((t) => ({ value: t.id, label: t.name }))
 
@@ -52,7 +56,7 @@ export function PlanEditor({
               {planTypes.map((t) => (
                 <SelectItem key={t.id} value={t.id}>
                   <span className="flex size-4 items-center justify-center">
-                    <BrickIcon brick={t.brick} colour={t.colour} size={16} />
+                    <BrickIcon brick={planTypeBrick(t, brickGrid)} colour={t.colour} size={16} />
                   </span>
                   {t.name}
                 </SelectItem>

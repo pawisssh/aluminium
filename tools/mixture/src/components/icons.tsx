@@ -15,9 +15,10 @@ export function CellGrid({ cells, size, className }: { cells: (string | null)[][
   )
 }
 
-export function BrickIcon({ brick, colour, size = 36 }: { brick: BrickSettings; colour: PlanColour; size?: number }) {
+/** A Brick drawn on the Brick grid; nothing for a Plan type with no Brick there. */
+export function BrickIcon({ brick, colour, size = 36 }: { brick: BrickSettings | undefined; colour: PlanColour; size?: number }) {
   const grid = useContext(BrickGridContext)
-  const mask = useMemo(() => generateBrick(brick, grid), [brick, grid])
+  const mask = useMemo(() => (brick ? generateBrick(brick, grid) : []), [brick, grid])
   const fill = colourHex(colour)
   return <CellGrid cells={mask.map((row) => row.map((on) => (on ? fill : null)))} size={size} />
 }

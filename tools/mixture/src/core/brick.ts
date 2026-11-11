@@ -21,6 +21,7 @@ export interface BrickGrid {
 }
 
 export const BRICK_GRIDS: { grid: BrickGrid; label: string }[] = [
+  { grid: { cols: 2, rows: 2 }, label: '2×2' },
   { grid: { cols: 4, rows: 4 }, label: '4×4' },
   { grid: { cols: 8, rows: 8 }, label: '8×8' },
   { grid: { cols: 16, rows: 16 }, label: '16×16' },
@@ -28,7 +29,7 @@ export const BRICK_GRIDS: { grid: BrickGrid; label: string }[] = [
   { grid: { cols: 8, rows: 12 }, label: '8×12 portrait' },
 ]
 
-export const DEFAULT_BRICK_GRID: BrickGrid = BRICK_GRIDS[0]!.grid
+export const DEFAULT_BRICK_GRID: BrickGrid = { cols: 4, rows: 4 }
 
 /** The Pattern Builder settings a Brick uses when it doesn't set its own. */
 export function brickDefaults(grid: BrickGrid = DEFAULT_BRICK_GRID) {
