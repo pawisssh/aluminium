@@ -31,8 +31,12 @@ How money goes into a Plan type: One-time, Dollar Cost Average or Market Timing.
 _Avoid_: Connected (the Pattern Guidelines' word for joined by edges), Disconnected (its word for joined at corners)
 
 **Risk**:
-How much a Plan type's value can swing: low, medium or high, drawn as a Flat, Half or 75% Slope. A range takes its middle, rounded up.
+How much a Plan type's value can swing: low, medium or high, drawn as a Flat, Half or 75% Slope. A range takes its middle, rounded up, and a Market Timing Plan type stops at Half.
 _Avoid_: risk level
+
+**Collection**:
+One of the eight sets a Plan type's Brick is filed under on the Bricks page in Figma, such as Guru Port or Cash. A Plan type is in exactly one.
+_Avoid_: playlist (the plan picker's own sets, where a plan can sit in several), category
 
 **Plan Cover**:
 A Plan type's artwork on the plan picker (the Plan Select Figma file), read off its rectangles onto 16×16 cells. Of the Bricks a Plan type's Strategy allows, the one that overlaps its Plan Cover most is its Brick, with the Brick scaled up to 16×16.
