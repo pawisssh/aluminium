@@ -6,17 +6,16 @@ import RAW from './planTypes.json?raw'
 import type { Strategy, StrategyValue } from './strategy'
 
 describe('defaultPlanTypes', () => {
-  it('gives every Plan type its own id and Brick seed', () => {
+  it('gives every Plan type its own id', () => {
     const types = defaultPlanTypes()
     expect(types).toHaveLength(38)
     expect(new Set(types.map((t) => t.id)).size).toBe(types.length)
-    expect(new Set(types.map((t) => t.brick.seed)).size).toBe(types.length)
   })
 
-  it('takes each Plan type’s Brick settings and In draws from the data', () => {
-    const allWeather = defaultPlanTypes().find((t) => t.id === 'astotz-all-weather')!
-    expect(allWeather.brick).toEqual({ family: 'hanging', slope: 'flat', seed: 'astotz-all-weather-143', guidance: 0, blockCount: 3 })
-    expect(allWeather.inDraws).toBe(true)
+  it('takes In draws, and the hand-set Brick of a Plan type that is not exported, from the data', () => {
+    const call = defaultPlanTypes().find((t) => t.id === 'investment-call')!
+    expect(call.brick).toEqual({ family: 'hanging', slope: 'half', seed: 'investment-call-4' })
+    expect(call.inDraws).toBe(true)
   })
 })
 
@@ -111,6 +110,11 @@ describe('an exported Plan type', () => {
     expect(exported.filter((t) => t.strategy.guesses).map((t) => t.id)).toHaveLength(10)
   })
 
+  it('carries no hand-set Brick: its Brick is the one picked from its Strategy', () => {
+    for (const type of exported) expect(type.brick, type.id).toBeUndefined()
+    expect(RAW.match(/"brick"/g)).toHaveLength(4)
+  })
+
   it('takes the name the Bricks page in Figma uses', () => {
     const names = new Map(exported.map((t) => [t.id, t.name]))
     expect(names.get('diy')).toBe('Self-directed Investing')
@@ -127,14 +131,20 @@ describe('an exported Plan type', () => {
 })
 
 describe('a Plan type that is not exported', () => {
+  const exported = new Set(exportedPlanTypes(defaultPlanTypes()).map((t) => t.id))
+  const rest = defaultPlanTypes().filter((t) => !exported.has(t.id))
+
   it('is one of four, with neither a Collection nor a Strategy', () => {
-    const exported = new Set(exportedPlanTypes(defaultPlanTypes()).map((t) => t.id))
-    const rest = defaultPlanTypes().filter((t) => !exported.has(t.id))
     expect(rest.map((t) => t.id)).toEqual(['investment-call', 'thai-stocks', 'global-stocks', 'bonds'])
     for (const t of rest) {
       expect(t.collection).toBeUndefined()
       expect(t.strategy).toBeUndefined()
     }
+  })
+
+  it('keeps its hand-set Brick, with a seed of its own, and the Brick draws', () => {
+    expect(new Set(rest.map((t) => t.brick?.seed)).size).toBe(4)
+    for (const t of rest) expect(generateBrick(t.brick!).flat().some(Boolean), t.id).toBe(true)
   })
 })
 
@@ -142,11 +152,10 @@ describe('the six new Plan types', () => {
   const NEW = ['definit-global-select', 'definit-set-select', 'rmf', 'thai-esg', 'money-market', 'kkp-finsave']
   const types = defaultPlanTypes()
 
-  it('each have a Plan colour of a Tint its colour family has, and a Brick that draws', () => {
+  it('each have a Plan colour of a Tint its colour family has', () => {
     for (const id of NEW) {
       const type = types.find((t) => t.id === id)!
       expect(familyTints(type.colour.family), id).toContain(type.colour.tint)
-      expect(generateBrick(type.brick).flat().some(Boolean), id).toBe(true)
     }
   })
 
@@ -160,11 +169,20 @@ describe('planTypesJson', () => {
     expect(planTypesJson(defaultPlanTypes())).toBe(RAW)
   })
 
-  it('writes an exported Plan type’s Collection and Strategy, with Monthly Cost, Expected Return and Content Type where it has them', () => {
+  it('writes an exported Plan type’s Collection and Strategy, with Monthly Cost, Expected Return and Content Type where it has them, and no Brick', () => {
     const goal = defaultPlanTypes().find((t) => t.id === 'goal')!
     const written = planTypesJson([{ ...goal, strategy: { ...goal.strategy!, monthlyCost: 1000, expectedReturn: '5-7%', contentType: 'Goal based', guesses: ['monthlyCost'] } }])
     expect(written).toBe(
-      '[\n  { "id": "goal", "name": "Goal", "family": "orange", "tint": 100, "collection": "Goals", "strategy": { "investmentStyle": "dollar-cost-average", "risk": ["low", "high"], "initialCost": 20000, "monthlyCost": 1000, "expectedReturn": "5-7%", "contentType": "Goal based", "guesses": ["monthlyCost"] }, "brick": { "family": "rising", "slope": "half", "seed": "goal-58" }, "inDraws": true }\n]\n',
+      '[\n  { "id": "goal", "name": "Goal", "family": "orange", "tint": 100, "collection": "Goals", "strategy": { "investmentStyle": "dollar-cost-average", "risk": ["low", "high"], "initialCost": 20000, "monthlyCost": 1000, "expectedReturn": "5-7%", "contentType": "Goal based", "guesses": ["monthlyCost"] }, "inDraws": true }\n]\n',
+    )
+  })
+})
+
+describe('planTypesJson for a Plan type that is not exported', () => {
+  it('writes its hand-set Brick, with the Pattern Builder settings it sets', () => {
+    const bonds = defaultPlanTypes().find((t) => t.id === 'bonds')!
+    expect(planTypesJson([{ ...bonds, brick: { ...bonds.brick!, guidance: 0, blockCount: 2 } }])).toBe(
+      '[\n  { "id": "bonds", "name": "หุ้นกู้", "family": "green", "tint": 75, "brick": { "family": "auto", "slope": "75", "seed": "bonds", "guidance": 0, "blockCount": 2 }, "inDraws": true }\n]\n',
     )
   })
 })

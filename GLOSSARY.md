@@ -47,7 +47,7 @@ A Plan type's artwork on the plan picker (the Plan Select Figma file), read off 
 _Avoid_: thumbnail, artwork (on its own)
 
 **Brick grid**:
-The cells every Brick is drawn on: 4×4 by default, or 8×8, 16×16 or a portrait grid (4×6, 8×12) to see how Bricks read at other sizes. One setting for all Bricks. A Plan type's Brick goes to the Bricks page in Figma on four: 2×2, 4×4, 8×8 and 16×16.
+The cells every Brick is drawn on: 4×4 by default, or 2×2, 8×8, 16×16 or a portrait grid (4×6, 8×12) to see how Bricks read at other sizes. One setting for all Bricks. A Plan type's Brick goes to the Bricks page in Figma on four: 2×2, 4×4, 8×8 and 16×16.
 _Avoid_: Brick size
 _Avoid in code_: canvas
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { BRICK_GRIDS, brickDefaults, generateBrick, type BrickSettings } from './brick'
+import { BRICK_GRIDS, DEFAULT_BRICK_GRID, brickDefaults, generateBrick, type BrickSettings } from './brick'
 
 /** How many pieces the filled cells make, joining by edges or corners. */
 function pieces(mask: boolean[][]): number {
@@ -56,6 +56,12 @@ describe('generateBrick', () => {
 })
 
 describe('generateBrick on other Brick grids', () => {
+  it('has the four square Brick grids a Brick goes to Figma on, then the portrait ones, with 4×4 the default', () => {
+    expect(BRICK_GRIDS.map((g) => g.label)).toEqual(['2×2', '4×4', '8×8', '16×16', '4×6 portrait', '8×12 portrait'])
+    expect(BRICK_GRIDS[0]!.grid).toEqual({ cols: 2, rows: 2 })
+    expect(DEFAULT_BRICK_GRID).toEqual({ cols: 4, rows: 4 })
+  })
+
   it('keeps the 4x4 Brick its old Pattern Builder settings', () => {
     expect(brickDefaults()).toEqual({ blockCount: 3, guidance: 60, cornerMeetLimit: 1 })
   })

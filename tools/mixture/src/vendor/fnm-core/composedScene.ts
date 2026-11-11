@@ -1,9 +1,9 @@
+import { articleCoverSettings, fadeRampCells, highlightHex, pageFills, stepEdgeCuts, tintFill } from './articleCover.js';
 import { textColourOnFill } from './colourway.js';
-import { DEFAULT_COLOURWAY_ID, getColourway } from './constants.js';
 import { getFormatDimensions } from './formats.js';
 import { gridFor } from './grid.js';
-import { layoutSlots, type LayoutSlot, type PxRect } from './layouts.js';
-import { logoPlacement } from './logoPlacement.js';
+import { articleCoverEdge, fadeDirectionOf, layoutSlots, type LayoutSlot, type PxRect } from './layouts.js';
+import { logoNotch, logoPlacement } from './logoPlacement.js';
 import { fillUnderSlot, textColourFor, TEXT_NAVY, TEXT_WHITE } from './textColour.js';
 import {
   layoutOutline,
@@ -18,7 +18,7 @@ import {
   type TextAlign,
   type TextLayout,
 } from './text/index.js';
-import type { Document, Page, PageLayoutId } from './types.js';
+import type { Document, FadeDirection, Page, PageLayoutId } from './types.js';
 
 /*
  * The composed scene (spec "Phase 3" and "Phase 5"; ADR 0008): the Pattern plus the Page layout's slots, filled
@@ -33,6 +33,8 @@ import type { Document, Page, PageLayoutId } from './types.js';
  *   4. the headline, secondary copy and label;
  *   5. the Ticker: its strip, then its two texts;
  *   6. the wordmark.
+ * An Article cover swaps 1 and 2 (`ScenePhoto.underBlocks`): background, the photo with its Step edge cuts and its
+ * Logo notch, then the Blocks over the photo, as on finnomena.com; the rest follows. No other layout changes.
  * No transparency anywhere. Text and the wordmark are White or Navy only; Highlight fills are a Colourway colour.
  *
  * Which fonts the text is laid out with is the shaper's business: give it the Trek faces and the lines match the
@@ -50,6 +52,8 @@ export const HEADLINE_MAX_OF_SHORT: Record<Exclude<PageLayoutId, 'pattern'>, num
   'section-divider': 0.12,
   content: 0.08,
   closing: 0.12,
+  // Prototype verdict on #67: 12% of the short side.
+  'article-cover': 0.12,
 };
 /** The secondary copy is at most this share of the headline size (or of the short side when there is none). */
 export const SECONDARY_OF_HEADLINE = 0.4;
@@ -62,6 +66,7 @@ export const TICKER_MAX_OF_SHORT = 0.03;
 const PLACEMENT: Partial<Record<PageLayoutId, Partial<Record<'headline' | 'label', { v?: 'top' | 'bottom'; align?: TextAlign }>>>> = {
   cover: { label: { v: 'bottom', align: 'right' } },
   'product-cover': { headline: { v: 'bottom' } },
+  'article-cover': { headline: { v: 'bottom' } },
 };
 
 /** A solid rectangle in Page pixels. */
@@ -72,6 +77,25 @@ export interface SceneRect {
   h: number;
   /** Hex colour, `#RRGGBB`. */
   fill: string;
+}
+
+/**
+ * The Photo fade (GLOSSARY): the photo dissolving into the background colour. The scene only describes it; core's
+ * `bakeFade` turns the description into pixels and an adapter (`PhotoBaker`) supplies them to the serializer.
+ * `start` and `end` are Page px along the direction's axis (x for `'left'` and `'full'`, y for `'bottom'`): the photo
+ * is fully `colour` at `start` and fully itself at `end`, and `curve` shapes the way between. `end` is past `start`
+ * for the axis's positive direction (rightward) and before it for `'bottom'`, which fades upward from `start`.
+ */
+export interface SceneFade {
+  /** The Page's Fade direction: `'left'` and `'full'` run along x, `'bottom'` along y. */
+  direction: FadeDirection;
+  start: number;
+  end: number;
+  /** Hex colour, `#RRGGBB`: always the Page's own background. */
+  colour: string;
+  curve: 'smoothstep';
+  /** The logo notch (`ScenePhoto.notch`) in Page px, baked as `colour` with a hard edge. Absent when there is none. */
+  notch?: PxRect;
 }
 
 /** The photo, filling its slot like `object-fit: cover`, centred. */
@@ -87,6 +111,27 @@ export interface ScenePhoto {
   height: number;
   /** Share of the image cut off on each side, 0 to 1; one of the two pairs is always 0. */
   crop: { left: number; top: number; right: number; bottom: number };
+  /**
+   * True when the photo is painted before the Blocks (an Article cover: background, photo, Blocks, ...). Absent on
+   * every other layout, which paints the Blocks first.
+   */
+  underBlocks?: true;
+  /**
+   * The Step edge: cells cut out of the photo, in the background colour, drawn over the photo and under the
+   * Blocks. Absent when the photo has no Step edge.
+   */
+  cuts?: SceneRect[];
+  /**
+   * The logo notch (#81): the whole cells under the wordmark plus its clear space cut out of the photo, in the
+   * background colour, with a hard edge. Drawn like a Step cut (over the photo, under the Blocks) and, with the
+   * Photo fade, baked into the photo as well. Only on an Article cover with the Bottom Fade direction.
+   */
+  notch?: SceneRect;
+  /**
+   * The Photo fade, baked into the photo's pixels before it is written (SVG, PNG and JPG each carry one opaque
+   * image). Absent when the photo has no fade; the Step edge uses `cuts` instead.
+   */
+  fade?: SceneFade;
 }
 
 /** A piece of a text line that takes its own colour: a Highlighted word, or the words around it. */
@@ -265,6 +310,58 @@ function sceneLines(
 }
 
 /**
+ * The photo of a Page as the scene draws it: its slot, crop and edge (the Step edge's cuts or the Photo fade). It needs
+ * no text, so a host can ask for it alone to bake the fade before the whole scene is composed. Undefined when the Page
+ * has no photo or its layout has no photo slot.
+ */
+export function composePhoto(doc: Document, pageIndex: number): ScenePhoto | undefined {
+  const page: Page = doc.pages[pageIndex] ?? { pattern: [] };
+  const content = page.content ?? {};
+  const photoSlot = layoutSlots(doc, pageIndex).slots.photo;
+  if (!content.photo || !photoSlot) return undefined;
+  const grid = gridFor(doc);
+  const fills = pageFills(doc, pageIndex);
+  const { x, y, w, h } = photoSlot.px;
+  const { width: iw, height: ih } = content.photo;
+  const crop = { left: 0, top: 0, right: 0, bottom: 0 };
+  if (iw > 0 && ih > 0 && w > 0 && h > 0) {
+    const scale = Math.max(w / iw, h / ih);
+    const shareX = Math.min(1, w / scale / iw);
+    const shareY = Math.min(1, h / scale / ih);
+    crop.left = crop.right = (1 - shareX) / 2;
+    crop.top = crop.bottom = (1 - shareY) / 2;
+  }
+  const photo: ScenePhoto = { x, y, w, h, href: content.photo.src, width: iw, height: ih, crop };
+  if (page.layout === 'article-cover') {
+    // The site paints the Blocks over the photo. The Step edge is the photo cut along Grid cells.
+    photo.underBlocks = true;
+    const { photoEdge, fadeLength } = articleCoverSettings(page);
+    const direction = fadeDirectionOf(page);
+    const edge = articleCoverEdge(doc, direction);
+    if (photoEdge === 'step') {
+      photo.cuts = stepEdgeCuts(photoSlot.cells, fadeLength, edge).map((c) =>
+        rectOf(c.col * grid.cellW, c.row * grid.cellH, c.w * grid.cellW, c.h * grid.cellH, fills.background)
+      );
+    } else {
+      // The photo is the background colour at the edge's start and itself `fadeLength` cells on (shortened to what the
+      // photo has there): rightward for Left and Full, upward for Bottom.
+      const ramp = fadeRampCells(fadeLength, edge.room);
+      const colour = fills.background;
+      photo.fade =
+        edge.axis === 'y'
+          ? { direction, start: edge.start * grid.cellH, end: (edge.start - ramp) * grid.cellH, colour, curve: 'smoothstep' }
+          : { direction, start: edge.start * grid.cellW, end: (edge.start + ramp) * grid.cellW, colour, curve: 'smoothstep' };
+    }
+    const notch = logoNotch(doc, pageIndex);
+    if (notch) {
+      photo.notch = rectOf(notch.col * grid.cellW, notch.row * grid.cellH, notch.w * grid.cellW, notch.h * grid.cellH, fills.background);
+      if (photo.fade) photo.fade.notch = { x: photo.notch.x, y: photo.notch.y, w: photo.notch.w, h: photo.notch.h };
+    }
+  }
+  return photo;
+}
+
+/**
  * The composed scene of a Page: every shape, photo, text line, Ticker and the wordmark, in Page pixels, with the
  * colour of each. Works for any layout; a 'pattern' Page has only its background and Blocks.
  */
@@ -274,7 +371,7 @@ export function composeScene(doc: Document, pageIndex: number, shaper: Shaper, o
   const layoutId = page.layout ?? 'pattern';
   const content = page.content ?? {};
   const grid = gridFor(doc);
-  const colourway = getColourway(doc.colourway) ?? getColourway(DEFAULT_COLOURWAY_ID)!;
+  const fills = pageFills(doc, pageIndex);
   const { widthPx: width, heightPx: height } = getFormatDimensions(doc);
   const short = Math.min(width, height);
   const { slots } = layoutSlots(doc, pageIndex);
@@ -283,28 +380,12 @@ export function composeScene(doc: Document, pageIndex: number, shaper: Shaper, o
   // 1. Background and Blocks.
   const blocks: SceneRect[] = [];
   for (const block of page.pattern) {
-    const count = colourway.tints.length;
-    const tint = count > 0 ? ((block.tint % count) + count) % count : 0;
-    const fill = colourway.tints[tint] ?? colourway.tints[0] ?? colourway.background;
+    const fill = tintFill(fills, block.tint);
     blocks.push(rectOf(block.col * grid.cellW, block.row * grid.cellH, block.w * grid.cellW, block.h * grid.cellH, fill));
   }
 
   // 2. Photo, solid, cropped to its slot like object-fit: cover.
-  let photo: ScenePhoto | undefined;
-  const photoSlot = slots.photo;
-  if (content.photo && photoSlot) {
-    const { x, y, w, h } = photoSlot.px;
-    const { width: iw, height: ih } = content.photo;
-    const crop = { left: 0, top: 0, right: 0, bottom: 0 };
-    if (iw > 0 && ih > 0 && w > 0 && h > 0) {
-      const scale = Math.max(w / iw, h / ih);
-      const shareX = Math.min(1, w / scale / iw);
-      const shareY = Math.min(1, h / scale / ih);
-      crop.left = crop.right = (1 - shareX) / 2;
-      crop.top = crop.bottom = (1 - shareY) / 2;
-    }
-    photo = { x, y, w, h, href: content.photo.src, width: iw, height: ih, crop };
-  }
+  const photo = composePhoto(doc, pageIndex);
 
   // Headline, with its Highlights.
   const texts: SceneText[] = [];
@@ -324,8 +405,14 @@ export function composeScene(doc: Document, pageIndex: number, shaper: Shaper, o
 
     const colour = textColourFor(doc, pageIndex, headlineSlot.cells);
     const under = fillUnderSlot(doc, pageIndex, headlineSlot.cells);
-    // Tint when the headline sits on the background, the background colour when it sits on a flat Block.
-    const highlightFill = under.onBlock ? colourway.background : (colourway.tints[0] ?? colourway.background);
+    // Tint when the headline sits on the background, the background colour when it sits on a flat Block. An
+    // Article cover's Highlight is the colour the user chose, apart from the Blocks (ADR 0010).
+    const highlightFill =
+      layoutId === 'article-cover'
+        ? highlightHex(articleCoverSettings(page).highlight)
+        : under.onBlock
+          ? fills.background
+          : (fills.tints[0] ?? fills.background);
     const highlightColour = textColourOnFill(highlightFill);
 
     for (const s of layout.highlights) {
@@ -400,7 +487,7 @@ export function composeScene(doc: Document, pageIndex: number, shaper: Shaper, o
   if (tickerContent?.show && slots.ticker && (left || right)) {
     const faceOf = monoFace(shaper, `${left}${right}`);
     if (faceOf) {
-      const navyBackground = colourway.background.toUpperCase() === TEXT_NAVY.toUpperCase();
+      const navyBackground = fills.background.toUpperCase() === TEXT_NAVY.toUpperCase();
       const stripFill = navyBackground ? TEXT_WHITE : TEXT_NAVY;
       const textFill = navyBackground ? TEXT_NAVY : TEXT_WHITE;
       const slot = slots.ticker.px;
@@ -449,7 +536,7 @@ export function composeScene(doc: Document, pageIndex: number, shaper: Shaper, o
   }
 
   const scene: ComposedScene = { width, height, blocks, highlights, wicks, texts };
-  if (!doc.transparentBackground) scene.background = colourway.background;
+  if (!doc.transparentBackground) scene.background = fills.background;
   if (photo) scene.photo = photo;
   if (ticker) scene.ticker = ticker;
   if (logo) scene.logo = logo;
