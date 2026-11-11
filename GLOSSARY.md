@@ -20,7 +20,11 @@ _Avoid in code_: Port
 
 **Brick**:
 A Plan type's icon: a single-colour Pattern-Builder Pattern on the Brick grid, so it is one piece joined by edges or corners and has a Brick family and a Slope.
-_Avoid_: Block (one rectangle inside a Pattern, in the Pattern Builder), icon, pixel art
+_Avoid_: Block (one rectangle inside a Pattern, in the Pattern Builder), pattern block, icon, pixel art
+
+**Strategy**:
+A Plan type's six values in the Pattern Guidelines: Content Type, Investment Style, Initial Cost, Monthly Cost, Risk and Expected Return.
+_Avoid_: positioning, profile
 
 **Plan Cover**:
 A Plan type's artwork on the plan picker (the Plan Select Figma file), read off its rectangles onto 16×16 cells. A Brick is matched to it by how much the two overlap, with the Brick scaled up to 16×16.
