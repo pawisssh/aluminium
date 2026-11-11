@@ -17,9 +17,11 @@ import { MIX_CASE_COLOURS } from '@/core/mixCases'
 import { PhonePreview } from '@/components/PhonePreview'
 import { PlanEditor } from '@/components/PlanEditor'
 import { PlanTypes } from '@/components/PlanTypes'
+// PROTOTYPE, throwaway: the #prototype page (see src/prototype).
+import { InitialCostPrototype } from '@/prototype/InitialCostPrototype'
 
-type Page = 'playground' | 'bricks' | 'cases'
-const pageFromHash = (): Page => (window.location.hash === '#cases' ? 'cases' : window.location.hash === '#bricks' ? 'bricks' : 'playground')
+type Page = 'playground' | 'bricks' | 'cases' | 'prototype'
+const pageFromHash = (): Page => (window.location.hash === '#prototype' ? 'prototype' : window.location.hash === '#cases' ? 'cases' : window.location.hash === '#bricks' ? 'bricks' : 'playground')
 
 /** The page in the URL hash, so #bricks and #cases can be linked. */
 function usePage() {
@@ -49,6 +51,8 @@ export default function App() {
 
   const updatePortfolio = (p: Portfolio) =>
     setState((s) => ({ ...s, portfolios: s.portfolios.map((q) => (q.id === p.id ? { ...p, plans: p.plans.map(storedPlan) } : q)) }))
+
+  if (page === 'prototype') return <InitialCostPrototype />
 
   return (
     <BrickGridContext value={brickGrid}>
