@@ -229,6 +229,8 @@ grep -qi microsoft /proc/version || { warn "This is not WSL: run the wizard in t
 [[ "$(uname -r)" == *WSL2* ]] || { warn "This is WSL 1. In PowerShell: wsl --set-version $DISTRO 2, then re-run."; exit 1; }
 [[ "$(uname -m)" == x86_64 ]] || { warn "This wizard installs the x64 runner; this machine is $(uname -m)."; exit 1; }
 gh_ready || { warn "Sign gh in as the repo's owner first (sudo apt-get install -y gh && gh auth login)."; exit 1; }
+# block was renamed on GitHub (block-c24df054); the API redirects the old name, so read the current one.
+BLOCK=$(gh api "repos/$BLOCK" --jq .full_name) || { warn "gh can't read $BLOCK."; exit 1; }
 # Registering a runner needs admin on the repo; git (block's clone and its fetches) signs in through gh.
 [[ "$(gh api "repos/$REPO" --jq .permissions.admin 2>/dev/null)" == true ]] ||
   { warn "gh's account ($(gh api user --jq .login 2>/dev/null || echo '?')) is not an admin of $REPO: gh auth login as its owner."; exit 1; }
