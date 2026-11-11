@@ -1,6 +1,6 @@
 // PROTOTYPE, throwaway: which rule should turn a Strategy's Initial Cost into the size of the
 // largest Block of a Brick, on each of the four exported Brick grids (2×2, 4×4, 8×8, 16×16)?
-// Three candidate rules, switched with ?rule=A|B|C on the #prototype page.
+// Four candidate rules, switched with ?rule=A|B|C|D on the #prototype page.
 // Nothing here is used by Mixture itself.
 import { getColourway, DEFAULT_COLOURWAY_ID } from '@/vendor/fnm-core/colourway'
 import { generatePattern } from '@/vendor/fnm-core/generator'
@@ -40,6 +40,7 @@ export function shapeOf(s: Strategy): { family: PatternFamily; slope: Slope; cor
 
 export interface Candidate {
   blocks: Block[]
+  family: PatternFamily
   mask: boolean[][]
   key: string
   /** The largest Block, by cells. */
@@ -92,7 +93,7 @@ export function pool(side: Side, family: PatternFamily, slope: Slope, cornerMeet
         const key = mask.map((row) => row.map((on) => (on ? 1 : 0)).join('')).join('/')
         const full = `${key}|${top.w}x${top.h}`
         if (!found.has(full))
-          found.set(full, { blocks, mask, key, top: { w: top.w, h: top.h }, edgeJoined: edgeJoined(mask), settings: `seed proto-${n} · ${blockCount} Blocks · Guidance ${guidance}` })
+          found.set(full, { blocks, family, mask, key, top: { w: top.w, h: top.h }, edgeJoined: edgeJoined(mask), settings: `${family} · seed proto-${n} · ${blockCount} Blocks · Guidance ${guidance}` })
       }
   const out = [...found.values()]
   pools.set(id, out)
@@ -107,6 +108,8 @@ export interface Rule {
   target: (side: Side, step: number) => string
   /** How far a largest Block is from the target; 0 is exact. */
   miss: (side: Side, step: number, top: { w: number; h: number }) => number
+  /** Brick families the rule lets a Plan type's Brick come from; left out, only the Investment Style's own. */
+  families?: (s: Strategy) => PatternFamily[]
 }
 
 // Rule A: the Guidelines' own shapes. Steps 1 to 4 are one narrow Block growing taller, steps 5 to 7 a growing square.
@@ -126,6 +129,10 @@ const AREAS: Record<Side, number[]> = {
 // Rule C: three tiers (up to 50,000 / 500,000 / 2,000,000 and up), the same share of every Brick grid.
 const TIERS: Record<Side, number[]> = { 2: [1, 1, 2], 4: [1, 2, 4], 8: [2, 6, 16], 16: [9, 24, 48] }
 const tierOf = (step: number) => (step <= 3 ? 0 : step === 4 ? 1 : 2)
+// Rule D: read off the Plan Covers. Up to 50,000 the Block is one narrow run (an eighth of the Brick grid
+// wide) that grows taller each step; from 500,000 it is wide (a quarter of the Brick grid or more each way).
+const NARROW: Record<Side, { w: number; h: number[] }> = { 2: { w: 1, h: [1, 1, 2, 2] }, 4: { w: 1, h: [1, 2, 2, 3] }, 8: { w: 1, h: [2, 3, 4, 5] }, 16: { w: 2, h: [4, 6, 8, 10] } }
+const WIDE: Record<Side, number> = { 2: 2, 4: 2, 8: 2, 16: 4 }
 const areaMiss = (want: number, top: { w: number; h: number }) => Math.abs(Math.log((top.w * top.h) / want))
 
 export const RULES: Rule[] = [
@@ -150,6 +157,20 @@ export const RULES: Rule[] = [
     target: (side, step) => `${TIERS[side][tierOf(step)]} ช่อง`,
     miss: (side, step, top) => areaMiss(TIERS[side][tierOf(step)]!, top),
   },
+  {
+    id: 'D',
+    name: 'ตาม Plan Cover',
+    note: 'อ่านจาก Plan Cover: ไม่เกิน 50,000 เป็น Block แคบ (1/8 ของ Brick grid) ที่สูงขึ้นทุกขั้น ตั้งแต่ 500,000 เป็น Block กว้าง (1/4 ขึ้นไปทั้งสองด้าน) และเปิด Brick family แบบ hanging ให้ Plan Cover เลือกได้ ยกเว้น Market Timing',
+    // On 2×2 a 2×2 Block is the whole Brick grid, so wide there means the two cells of one row.
+    target: (side, step) => (step <= 3 ? `${NARROW[side].w}×${NARROW[side].h[step]}` : side === 2 ? '2×1' : `≥${WIDE[side]}×${WIDE[side]}`),
+    miss: (side, step, top) =>
+      step <= 3
+        ? Math.abs(top.w - NARROW[side].w) + Math.abs(top.h - NARROW[side].h[step]!)
+        : side === 2
+          ? Math.abs(top.w - 2) + Math.abs(top.h - 1)
+          : Math.max(0, WIDE[side] - top.w) + Math.max(0, WIDE[side] - top.h),
+    families: (s) => (s.style === 'market-timing' ? ['mountain'] : ['rising', 'hanging']),
+  },
 ]
 
 export interface Picked {
@@ -171,7 +192,7 @@ export function pickAll(rule: Rule, side: Side): Picked[] {
   const taken = new Set<string>()
   return strategies.map((strategy) => {
     const { family, slope, cornerMeetLimit } = shapeOf(strategy)
-    const all = pool(side, family, slope, cornerMeetLimit)
+    const all = (rule.families?.(strategy) ?? [family]).flatMap((f) => pool(side, f, slope, cornerMeetLimit))
     const allowed = strategy.style === 'market-timing' ? all : all.filter((c) => c.edgeJoined === (strategy.style === 'one-time'))
     const cover = strategy.cover ? planCover(strategy.cover) : undefined
     const step = stepOf(strategy)
@@ -188,4 +209,10 @@ export function pickAll(rule: Rule, side: Side): Picked[] {
     taken.add(best.c.key)
     return { strategy, candidate: best.c, miss: best.miss, allowed: allowed.length, repeat: !best.fresh }
   })
+}
+
+/** How much a picked Brick overlaps its Plan type's Plan Cover; null for a Plan type with none. */
+export function coverOverlap(p: Picked): number | null {
+  const cover = p.strategy.cover ? planCover(p.strategy.cover) : undefined
+  return cover && p.candidate ? coverMatch(p.candidate.mask, cover) : null
 }

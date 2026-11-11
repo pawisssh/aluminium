@@ -1,5 +1,5 @@
-// PROTOTYPE, throwaway: three rules for turning Initial Cost into the largest Block of a Brick,
-// switchable via ?rule=A|B|C on the #prototype page. See initialCost.ts; picks.json comes from generate.mjs.
+// PROTOTYPE, throwaway: four rules for turning Initial Cost into the largest Block of a Brick,
+// switchable via ?rule=A|B|C|D on the #prototype page. See initialCost.ts; picks.json comes from generate.mjs.
 import { useEffect, useState } from 'react'
 import { RULES, SIDES, STEPS, shapeOf, stepOf, strategies, type Side, type Strategy } from './initialCost'
 import PICKS from './picks.json'
@@ -7,6 +7,7 @@ import PICKS from './picks.json'
 interface Pick {
   id: string
   blocks: number[][]
+  family: string | null
   top: number[] | null
   exact: boolean
   allowed: number
@@ -62,6 +63,7 @@ function Row({ strategy, ruleId, seams }: { strategy: Strategy; ruleId: string; 
             <div className="mt-1 text-xs tabular-nums text-muted-foreground">
               {pick.top ? pick.top.join('×') : 'ไม่มี'} {pick.exact ? <span className="text-emerald-600">ตรง</span> : <span className="text-amber-600">ใกล้สุด</span>}
               {pick.repeat && <span className="text-red-600"> · ซ้ำ</span>}
+              {pick.family === 'hanging' && <span> · hanging</span>}
             </div>
           </td>
         )
