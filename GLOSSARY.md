@@ -10,7 +10,7 @@ _Avoid_: Fund, holding
 _Avoid in code_: product
 
 **Plan type**:
-One kind of Plan a customer can hold, such as Global Multi-Income Strategy or หุ้นไทย, with a name, a Plan colour and a Brick. Random draws pick only the Plan types that are in draws.
+One kind of Plan a customer can hold, such as GMI or หุ้นไทย, with a name, a Plan colour and a Brick. Random draws pick only the Plan types that are in draws.
 _Avoid_: Brick (the Plan type's drawing, not the Plan type), offering
 
 **Portfolio**:
