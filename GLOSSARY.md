@@ -23,11 +23,19 @@ A Plan type's icon: a single-colour Pattern-Builder Pattern on the Brick grid, s
 _Avoid_: Block (one rectangle inside a Pattern, in the Pattern Builder), pattern block, icon, pixel art
 
 **Strategy**:
-A Plan type's six values in the Pattern Guidelines: Content Type, Investment Style, Initial Cost, Monthly Cost, Risk and Expected Return.
+A Plan type's six values in the Pattern Guidelines: Content Type, Investment Style, Initial Cost, Monthly Cost, Risk and Expected Return. It sets the Plan type's Brick: Investment Style the Brick family and how the Blocks join, Risk the Slope, Initial Cost the size of the largest Block.
 _Avoid_: positioning, profile
 
+**Investment Style**:
+How money goes into a Plan type: One-time, Dollar Cost Average or Market Timing. One-time draws a rising Brick joined by edges, Dollar Cost Average a rising Brick joined at corners, Market Timing a mountain Brick.
+_Avoid_: Connected (the Pattern Guidelines' word for joined by edges), Disconnected (its word for joined at corners)
+
+**Risk**:
+How much a Plan type's value can swing: low, medium or high, drawn as a Flat, Half or 75% Slope. A range takes its middle, rounded up.
+_Avoid_: risk level
+
 **Plan Cover**:
-A Plan type's artwork on the plan picker (the Plan Select Figma file), read off its rectangles onto 16×16 cells. A Brick is matched to it by how much the two overlap, with the Brick scaled up to 16×16.
+A Plan type's artwork on the plan picker (the Plan Select Figma file), read off its rectangles onto 16×16 cells. Of the Bricks a Plan type's Strategy allows, the one that overlaps its Plan Cover most is its Brick, with the Brick scaled up to 16×16.
 _Avoid_: thumbnail, artwork (on its own)
 
 **Brick grid**:
