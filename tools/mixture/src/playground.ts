@@ -29,7 +29,7 @@ export interface Playground {
   selectedId: string
 }
 
-const STORAGE_KEY = 'mixture:v5'
+const STORAGE_KEY = 'mixture:v6'
 
 let nextId = 0
 export const id = () => `${Date.now().toString(36)}-${(nextId++).toString(36)}`

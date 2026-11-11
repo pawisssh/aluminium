@@ -1,15 +1,27 @@
 import { colourKey, type ColourFamily, type PlanColour, type Tint } from './colours'
 import type { BrickSettings } from './brick'
+import type { Strategy } from './strategy'
 import type { PatternFamily, Slope } from '@/vendor/fnm-core/types'
-// The plans on the plan picker (plan-select/plans), in its order, then the four that sit outside it.
+// The eight Collections, in the order of the Bricks page in Figma.
+import COLLECTION_NAMES from './collections.json'
+// The Plan types on the Bricks page in Figma, in its order, then the four that are not exported.
 // Kept as data: some official names use words the glossary keeps out of code. Each one's Brick
-// settings come from the closest match to its artwork on the plan picker, where it has one.
+// settings come from the closest match to its artwork on the plan picker, where it has one. The six
+// with no Plan Cover on that page (RMF for Retirement, Thai ESG, Definit Global Select, Definit SET
+// Select, Money Market, KKP Finsave) have a temporary Brick, until a Brick is picked from the
+// Strategy, and stay out of draws.
 import PLAN_TYPES from './planTypes.json'
+
+export const COLLECTIONS: readonly string[] = COLLECTION_NAMES
 
 export interface PlanType {
   id: string
   name: string
   colour: PlanColour
+  /** The Collection its Brick is filed under. A Plan type is exported exactly when it has one. */
+  collection?: string
+  /** Every exported Plan type has one; the rest have none. */
+  strategy?: Strategy
   brick: BrickSettings
   /** Whether random draws (a new Plan, a redrawn Plan, a picked Mix case) may pick it. */
   inDraws: boolean
@@ -20,21 +32,35 @@ export function defaultPlanTypes(): PlanType[] {
     id: t.id,
     name: t.name,
     colour: { family: t.family as ColourFamily, tint: t.tint as Tint },
+    ...(t.collection !== undefined && { collection: t.collection }),
+    ...(t.strategy !== undefined && { strategy: t.strategy as Strategy }),
     brick: { ...t.brick, family: t.brick.family as PatternFamily, slope: t.brick.slope as Slope },
     inDraws: t.inDraws,
   }))
 }
 
+/** A Plan type with a Collection and a Strategy: one whose Brick goes to the Bricks page in Figma. */
+export type ExportedPlanType = PlanType & { collection: string; strategy: Strategy }
+
+/** The exported Plan types, Collection by Collection in the order of the Bricks page in Figma, each Collection in the order given. */
+export function exportedPlanTypes(types: PlanType[]): ExportedPlanType[] {
+  const exported = types.filter((t): t is ExportedPlanType => t.collection !== undefined && t.strategy !== undefined)
+  return COLLECTIONS.flatMap((collection) => exported.filter((t) => t.collection === collection))
+}
+
 /** Plan types written out as `planTypes.json` is: one line each, so a saved set diffs cleanly. */
 export function planTypesJson(types: PlanType[]): string {
+  // JSON with a space after each comma, as the file has it.
+  const value = (v: unknown): string => (Array.isArray(v) ? `[${v.map(value).join(', ')}]` : JSON.stringify(v))
   const fields = (entries: [string, unknown][]) =>
     entries
       .filter(([, v]) => v !== undefined)
-      .map(([k, v]) => `${JSON.stringify(k)}: ${JSON.stringify(v)}`)
+      .map(([k, v]) => `${JSON.stringify(k)}: ${value(v)}`)
       .join(', ')
-  const lines = types.map(({ id, name, colour, brick: b, inDraws }) => {
+  const lines = types.map(({ id, name, colour, collection, strategy: s, brick: b, inDraws }) => {
+    const strategy = s && `, "strategy": { ${fields([['investmentStyle', s.investmentStyle], ['risk', s.risk], ['initialCost', s.initialCost], ['monthlyCost', s.monthlyCost], ['expectedReturn', s.expectedReturn], ['contentType', s.contentType], ['guesses', s.guesses]])} }`
     const brick = fields([['family', b.family], ['slope', b.slope], ['seed', b.seed], ['guidance', b.guidance], ['blockCount', b.blockCount], ['cornerMeetLimit', b.cornerMeetLimit]])
-    return `  { ${fields([['id', id], ['name', name], ['family', colour.family], ['tint', colour.tint]])}, "brick": { ${brick} }, "inDraws": ${inDraws} }`
+    return `  { ${fields([['id', id], ['name', name], ['family', colour.family], ['tint', colour.tint], ['collection', collection]])}${strategy ?? ''}, "brick": { ${brick} }, "inDraws": ${inDraws} }`
   })
   return `[\n${lines.join(',\n')}\n]\n`
 }
