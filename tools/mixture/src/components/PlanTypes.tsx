@@ -4,6 +4,7 @@ import { BRICK_GRIDS, brickDefaults, generateBrick, type BrickGrid, type BrickSe
 import { COLOUR_FAMILIES, colourHex, familyTints, type ColourFamily, type Tint } from '@/core/colours'
 import { closestBricks, coverMatch, planCover, type CoverCandidate } from '@/core/planCovers'
 import { planTypesJson, type PlanType } from '@/core/planTypes'
+import { strategyLine, type Strategy } from '@/core/strategy'
 import { generateRandomSeed, id } from '@/playground'
 import { blockCountRangeFor } from '@/vendor/fnm-core/generator'
 import type { PatternFamily, Slope } from '@/vendor/fnm-core/types'
@@ -213,6 +214,8 @@ function PlanTypeCard({
         </div>
       </div>
 
+      {type.collection && type.strategy && <CollectionAndStrategy collection={type.collection} strategy={type.strategy} />}
+
       <div className="grid grid-cols-2 gap-2">
         <Field label="Brick family">
           <Select items={PATTERN_FAMILIES} value={type.brick.family} onValueChange={(f) => f && setBrick({ family: f as PatternFamily })}>
@@ -295,6 +298,31 @@ function PlanTypeCard({
           <Trash2 />
         </Button>
       </div>
+    </div>
+  )
+}
+
+/** An exported Plan type's Collection and its Strategy, read-only: a Strategy is changed in `planTypes.json`. */
+function CollectionAndStrategy({ collection, strategy }: { collection: string; strategy: Strategy }) {
+  return (
+    <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs">
+      <span className="rounded-md bg-muted px-1.5 py-0.5 font-medium" title="Collection on the Bricks page in Figma">
+        {collection}
+      </span>
+      {strategyLine(strategy).map((part) => (
+        <span key={part.value} className="flex items-center gap-1.5">
+          <span className="text-muted-foreground" aria-hidden>
+            ·
+          </span>
+          {part.guess ? (
+            <span className="text-muted-foreground italic underline decoration-dashed underline-offset-2" title="A guess: no source for this value yet">
+              {part.text} (guess)
+            </span>
+          ) : (
+            part.text
+          )}
+        </span>
+      ))}
     </div>
   )
 }

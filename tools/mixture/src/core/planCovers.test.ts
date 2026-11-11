@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { generateBrick } from './brick'
 import { defaultPlanTypes } from './planTypes'
 import { closestBricks, coverMatch, planCover } from './planCovers'
+import PLAN_COVERS from './planCovers.json'
 
 const grid4 = { cols: 4, rows: 4 }
 
@@ -11,6 +12,22 @@ describe('planCover', () => {
     expect(covered).toHaveLength(28)
     for (const t of covered) expect(planCover(t.id)!.map((row) => row.length)).toEqual(Array(16).fill(16))
     expect(planCover('thai-stocks')).toBeUndefined()
+  })
+
+  it('keeps every Plan Cover with its Plan type through the renames, and has none for the six new Plan types', () => {
+    const names = new Map(defaultPlanTypes().map((t) => [t.id, t.name]))
+    const covers: Record<string, { figmaNode: string }> = PLAN_COVERS
+    for (const id of Object.keys(covers)) expect(names.has(id), id).toBe(true)
+    // The Figma nodes the Plan Covers of the renamed Plan types were read off.
+    expect(['tax-saving', 'diy', 'gmi'].map((id) => [names.get(id), covers[id]?.figmaNode])).toEqual([
+      ['Tax Saving SSF', '13:408'],
+      ['Self-directed Investing', '13:381'],
+      ['GMI', '6:1007'],
+    ])
+    // Savings never had one.
+    expect(names.get('e-savings')).toBe('Savings')
+    expect(planCover('e-savings')).toBeUndefined()
+    for (const id of ['definit-global-select', 'definit-set-select', 'rmf', 'thai-esg', 'money-market', 'kkp-finsave']) expect(planCover(id), id).toBeUndefined()
   })
 })
 
