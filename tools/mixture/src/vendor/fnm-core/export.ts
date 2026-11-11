@@ -1,3 +1,4 @@
+import { holdsArticleCover } from './articleCover.js';
 import type { Document } from './types.js';
 
 export interface ExportFileNameOptions {
@@ -7,6 +8,7 @@ export interface ExportFileNameOptions {
 /**
  * Generates a filesystem-safe export filename for a Document.
  * Format: fnm-pattern_<format>_<colourway>_<seed>[@<scale>x].<ext>
+ * An Article cover has no Colourway (it is always navy), so its name is fnm-pattern_<format>_<seed>.<ext>.
  * Unsafe filesystem characters are replaced with hyphens.
  */
 export function exportFileName(
@@ -24,5 +26,6 @@ export function exportFileName(
 
   const scaleSuffix = options?.scale && options.scale > 1 ? `@${options.scale}x` : '';
 
-  return `fnm-pattern_${safeFormat}_${safeColourway}_${safeSeed}${scaleSuffix}.${cleanExt}`;
+  const colourwayPart = holdsArticleCover(doc) ? '' : `${safeColourway}_`;
+  return `fnm-pattern_${safeFormat}_${colourwayPart}${safeSeed}${scaleSuffix}.${cleanExt}`;
 }

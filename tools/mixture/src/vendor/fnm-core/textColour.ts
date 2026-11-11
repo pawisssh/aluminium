@@ -1,5 +1,5 @@
+import { pageFills, tintFill } from './articleCover.js';
 import { BRAND_COLOURS, textColourOnFill } from './colourway.js';
-import { DEFAULT_COLOURWAY_ID, getColourway } from './constants.js';
 import { gridFor } from './grid.js';
 import type { Document } from './types.js';
 import { cellsCovering, type CellRect, type PxRect } from './layouts.js';
@@ -23,7 +23,7 @@ export function textColourFor(doc: Document, pageIndex: number, slot: CellRect):
  * background colour on a flat Block).
  */
 export function fillUnderSlot(doc: Document, pageIndex: number, slot: CellRect): { fill: string; onBlock: boolean } {
-  const colourway = getColourway(doc.colourway) ?? getColourway(DEFAULT_COLOURWAY_ID)!;
+  const fills = pageFills(doc, pageIndex);
   const pattern = doc.pages[pageIndex]?.pattern ?? [];
   const grid = gridFor(doc);
   const col0 = Math.max(0, slot.col);
@@ -47,15 +47,13 @@ export function fillUnderSlot(doc: Document, pageIndex: number, slot: CellRect):
     }
   }
 
-  let fill = colourway.background;
+  let fill = fills.background;
   let onBlock = false;
   let best = cells - [...covered.values()].reduce((sum, n) => sum + n, 0);
   for (const [i, n] of covered) {
     if (n > best) {
       best = n;
-      const count = colourway.tints.length;
-      const tint = count > 0 ? ((pattern[i]!.tint % count) + count) % count : 0;
-      fill = colourway.tints[tint] ?? colourway.background;
+      fill = tintFill(fills, pattern[i]!.tint);
       onBlock = true;
     }
   }
@@ -67,25 +65,23 @@ export function fillUnderSlot(doc: Document, pageIndex: number, slot: CellRect):
  * two neighbouring Blocks of the same Tint count as one. Parts of the rectangle outside the Page are ignored.
  */
 export function uniformFillUnder(doc: Document, pageIndex: number, rect: PxRect): string | null {
-  const colourway = getColourway(doc.colourway) ?? getColourway(DEFAULT_COLOURWAY_ID)!;
+  const fills = pageFills(doc, pageIndex);
   const pattern = doc.pages[pageIndex]?.pattern ?? [];
   const grid = gridFor(doc);
   const x0 = Math.max(0, rect.x);
   const y0 = Math.max(0, rect.y);
   const x1 = Math.min(grid.cols * grid.cellW, rect.x + rect.w);
   const y1 = Math.min(grid.rows * grid.cellH, rect.y + rect.h);
-  if (x1 <= x0 || y1 <= y0) return colourway.background;
+  if (x1 <= x0 || y1 <= y0) return fills.background;
   const cells = cellsCovering({ x: x0, y: y0, w: x1 - x0, h: y1 - y0 }, grid);
-  const count = colourway.tints.length;
   let found: string | null = null;
   for (let c = cells.col; c < cells.col + cells.w; c++) {
     for (let r = cells.row; r < cells.row + cells.h; r++) {
-      let fill = colourway.background;
+      let fill = fills.background;
       for (let i = pattern.length - 1; i >= 0; i--) {
         const b = pattern[i]!;
         if (c >= b.col && c < b.col + b.w && r >= b.row && r < b.row + b.h) {
-          const tint = count > 0 ? ((b.tint % count) + count) % count : 0;
-          fill = colourway.tints[tint] ?? colourway.background;
+          fill = tintFill(fills, b.tint);
           break;
         }
       }

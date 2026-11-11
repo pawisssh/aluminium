@@ -1,3 +1,4 @@
+import { articleCoverProblem, DEFAULT_PHOTO_EDGE, FADE_DIRECTIONS, HIGHLIGHT_COLOURS, PHOTO_EDGES } from './articleCover.js';
 import { colourwayForIndex, getColourway } from './constants.js';
 import { LEGACY_COLOURWAY_IDS } from './colourway.js';
 import { gridFor } from './grid.js';
@@ -7,6 +8,7 @@ import { withoutPhoto } from './content.js';
 import { isPageEdited, pageSeed, settlePages } from './pages.js';
 import { validateDocument } from './serialization.js';
 import type {
+  ArticleCoverSettings,
   Block,
   DensityLevel,
   Document,
@@ -43,7 +45,7 @@ const FORMAT_IDS: readonly FormatId[] = [
 const DENSITIES: readonly DensityLevel[] = ['coarse', 'medium', 'fine', 'extra-fine'];
 const SLOPE_IDS: readonly Slope[] = ['flat', 'half', '75'];
 const MODES: readonly TextZone['mode'][] = ['clear', 'flat'];
-const LAYOUT_IDS: readonly PageLayoutId[] = ['pattern', 'headline', 'cover', 'product-cover', 'section-divider', 'content', 'closing'];
+const LAYOUT_IDS: readonly PageLayoutId[] = ['pattern', 'headline', 'cover', 'product-cover', 'section-divider', 'content', 'closing', 'article-cover'];
 
 const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
 
@@ -132,11 +134,32 @@ function contentExtra(page: Page): unknown {
   return o;
 }
 
-/** A Page's layout and content for a link: 0, or [layout index, content]. Never the photo. */
+/**
+ * A Page's layout and content for a link: 0, or [layout index, content], or on an Article cover with its settings
+ * set [layout index, content, [Highlight colour index, Photo edge index, fade length, fade direction index]]
+ * (HIGHLIGHT_COLOURS, PHOTO_EDGES, FADE_DIRECTIONS; trailing settings are left out when unset). Never the photo.
+ */
 function pageExtra(page: Page): unknown {
   const c = contentExtra(page);
   if (!page.layout && c === 0) return 0;
-  return [LAYOUT_IDS.indexOf(page.layout ?? 'pattern'), c];
+  const extra: unknown[] = [LAYOUT_IDS.indexOf(page.layout ?? 'pattern'), c];
+  const settings = page.articleCover;
+  if (settings?.highlight || settings?.photoEdge || settings?.fadeLength !== undefined || settings?.fadeDirection) {
+    // Positional, and only what the Page sets is written: [Highlight index, Photo edge index, fade length in cells,
+    // fade direction index]. A setting before a set one that is itself unset writes a filler that reads back as unset
+    // or as the default: yellow (index 0) for the Highlight, the Fade edge (index 0 of PHOTO_EDGES) for the Photo edge,
+    // and 0 for the length, which is outside 6 to 14 so it can only mean "no length set" (the default length depends
+    // on the direction, so a filler of 6 or 10 would turn into an explicit length). A Photo edge and a direction are
+    // written even when they are today's default, so a later change of default cannot change a saved link.
+    const set: number[] = [HIGHLIGHT_COLOURS.indexOf(settings.highlight ?? 'yellow')];
+    if (settings.photoEdge || settings.fadeLength !== undefined || settings.fadeDirection) {
+      set.push(PHOTO_EDGES.indexOf(settings.photoEdge ?? DEFAULT_PHOTO_EDGE));
+    }
+    if (settings.fadeLength !== undefined || settings.fadeDirection) set.push(settings.fadeLength ?? 0);
+    if (settings.fadeDirection) set.push(FADE_DIRECTIONS.indexOf(settings.fadeDirection));
+    extra.push(set);
+  }
+  return extra;
 }
 
 /** A deck Page's extras: [layout index, content, seed, edited]. Every Page has them, so Pages differ after decoding. */
@@ -236,12 +259,41 @@ function zoneFromArray(v: unknown): TextZone | undefined | null {
 }
 
 /** Reads a Page's layout and content from a link; null when malformed (the Document validation does the rest). */
-function pageExtraFromLink(v: unknown, deck = false): { layout?: PageLayoutId; content?: PageContent; seed?: string; edited?: boolean } | null {
+function pageExtraFromLink(
+  v: unknown,
+  deck = false
+): { layout?: PageLayoutId; content?: PageContent; seed?: string; edited?: boolean; articleCover?: ArticleCoverSettings } | null {
   if (v === 0) return {};
-  if (!isArr(v) || v.length !== (deck ? 4 : 2) || !isInt(v[0])) return null;
+  // A deck never holds an Article cover, so only a one-Page link has the optional settings element.
+  if (!isArr(v) || !(deck ? v.length === 4 : v.length === 2 || v.length === 3) || !isInt(v[0])) return null;
   const layout = LAYOUT_IDS[v[0]];
   if (!layout) return null;
-  const out: { layout?: PageLayoutId; content?: PageContent; seed?: string; edited?: boolean } = layout === 'pattern' ? {} : { layout };
+  const out: { layout?: PageLayoutId; content?: PageContent; seed?: string; edited?: boolean; articleCover?: ArticleCoverSettings } =
+    layout === 'pattern' ? {} : { layout };
+  if (v.length === 3) {
+    const settings = v[2];
+    if (layout !== 'article-cover' || !isArr(settings) || settings.length < 1 || settings.length > 4 || !settings.every(isInt)) return null;
+    const highlight = HIGHLIGHT_COLOURS[settings[0] as number];
+    if (!highlight) return null;
+    out.articleCover = { highlight };
+    if (settings.length > 1) {
+      const photoEdge = PHOTO_EDGES[settings[1] as number];
+      if (!photoEdge) return null;
+      out.articleCover.photoEdge = photoEdge;
+    }
+    if (settings.length > 2) {
+      // 0 is the filler for "no length set", written only to reach a fade direction after it.
+      if (!(settings.length === 4 && settings[2] === 0)) {
+        if (articleCoverProblem({ fadeLength: settings[2] })) return null;
+        out.articleCover.fadeLength = settings[2] as number;
+      }
+    }
+    if (settings.length > 3) {
+      const fadeDirection = FADE_DIRECTIONS[settings[3] as number];
+      if (!fadeDirection) return null;
+      out.articleCover.fadeDirection = fadeDirection;
+    }
+  }
   if (deck) {
     if (typeof v[2] !== 'string' || !v[2] || (v[3] !== 0 && v[3] !== 1)) return null;
     out.seed = v[2];
@@ -332,7 +384,15 @@ export function decodeShareLink(fragment: string): ShareLinkResult {
   }
 
   const inputsOnly = p.length <= 11;
-  const rawPages: { pattern: Block[]; textZone?: TextZone; layout?: PageLayoutId; content?: PageContent; seed?: string; edited?: boolean }[] = [];
+  const rawPages: {
+    pattern: Block[];
+    textZone?: TextZone;
+    layout?: PageLayoutId;
+    content?: PageContent;
+    seed?: string;
+    edited?: boolean;
+    articleCover?: ArticleCoverSettings;
+  }[] = [];
   if (version === DECK_LINK_VERSION && inputsOnly) return invalid('Share link is not valid');
   if (inputsOnly) {
     const textZone = zoneFromArray(zone);

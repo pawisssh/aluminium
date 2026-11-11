@@ -1,9 +1,11 @@
+import { articleCoverDocumentProblem, articleCoverProblem, colourPhotoProblem } from './articleCover.js';
 import { getColourway, migrateColourwayId } from './constants.js';
 import { cleanContent, contentProblem } from './content.js';
 import { densityLevelsFor, FORMATS } from './formats.js';
 import { isValidBlockSize, validateGeneratorParams } from './generator.js';
 import { gridFor } from './grid.js';
 import type {
+  ArticleCoverSettings,
   Block,
   CustomSize,
   DensityLevel,
@@ -24,8 +26,10 @@ import type {
  * File schema 3 (decks) adds the Page `seed` and `edited` that a Document with several Pages carries, and the
  * layouts 'section-divider', 'content' and 'closing'. Schema 1 and 2 files hold none of it and load unchanged:
  * a Page with no seed or edited state of its own uses the Document's (see pages.ts).
+ * File schema 4 adds the layout 'article-cover' and the Page `articleCover` it carries (ADR 0010). Earlier files
+ * hold neither and load unchanged.
  */
-export const CURRENT_SCHEMA_VERSION = 3;
+export const CURRENT_SCHEMA_VERSION = 4;
 export const CURRENT_APP_NAME = 'fnm-pattern-builder';
 
 const ALLOWED_FILE_KEYS = new Set(['app', 'schema', 'document']);
@@ -42,8 +46,8 @@ const ALLOWED_DOC_KEYS = new Set([
   'edited',
   'transparentBackground',
 ]);
-const ALLOWED_PAGE_KEYS = new Set(['pattern', 'textZone', 'layout', 'content', 'seed', 'edited']);
-const PAGE_LAYOUTS: readonly PageLayoutId[] = ['pattern', 'headline', 'cover', 'product-cover', 'section-divider', 'content', 'closing'];
+const ALLOWED_PAGE_KEYS = new Set(['pattern', 'textZone', 'layout', 'content', 'seed', 'edited', 'articleCover']);
+const PAGE_LAYOUTS: readonly PageLayoutId[] = ['pattern', 'headline', 'cover', 'product-cover', 'section-divider', 'content', 'closing', 'article-cover'];
 const ALLOWED_GENERATOR_KEYS = new Set(['slope', 'blockCount', 'cornerMeetLimit', 'guidance', 'family', 'referenceSet']);
 const ALLOWED_TEXT_ZONE_KEYS = new Set(['col', 'row', 'w', 'h', 'mode']);
 const ALLOWED_BLOCK_KEYS = new Set(['id', 'col', 'row', 'w', 'h', 'tint']);
@@ -396,6 +400,15 @@ export function validateDocument(rawDoc: unknown): DeserializeResult {
     if (page.edited !== undefined && typeof page.edited !== 'boolean') {
       return { error: { code: 'file.invalid', message: `Edited on page ${pIdx} must be a boolean` } };
     }
+    let articleCover: ArticleCoverSettings | undefined;
+    if (page.articleCover !== undefined) {
+      if (layout !== 'article-cover') {
+        return { error: { code: 'file.invalid', message: `Page ${pIdx} has Article cover settings but is not an Article cover` } };
+      }
+      const problem = articleCoverProblem(page.articleCover);
+      if (problem) return { error: { code: 'file.invalid', message: `Article cover settings on page ${pIdx}: ${problem.message}` } };
+      articleCover = { ...(page.articleCover as ArticleCoverSettings) };
+    }
     let content: PageContent | undefined;
     if (page.content !== undefined) {
       const problem = contentProblem(page.content);
@@ -518,6 +531,7 @@ export function validateDocument(rawDoc: unknown): DeserializeResult {
       ...(textZone ? { textZone } : {}),
       ...(layout ? { layout } : {}),
       ...(content ? { content } : {}),
+      ...(articleCover ? { articleCover } : {}),
       ...(page.seed !== undefined ? { seed: page.seed as string } : {}),
       ...(page.edited !== undefined ? { edited: page.edited as boolean } : {}),
     });
@@ -536,13 +550,15 @@ export function validateDocument(rawDoc: unknown): DeserializeResult {
     edited: doc.edited,
     ...(doc.transparentBackground === true ? { transparentBackground: true } : {}),
   };
+  const coverProblem = articleCoverDocumentProblem(cleanDoc) ?? colourPhotoProblem(cleanDoc);
+  if (coverProblem) return { error: { code: 'file.invalid', message: coverProblem } };
 
   return { document: cleanDoc };
 }
 
 /**
  * Serializes a Document into a versioned JSON string.
- * Top-level structure: { "app": "fnm-pattern-builder", "schema": 3, "document": { ... } }
+ * Top-level structure: { "app": "fnm-pattern-builder", "schema": 4, "document": { ... } }
  * The file keeps everything, photo included (share links drop the photo).
  * Colourways are referenced by id only, and tints by index only — never RGB hex.
  */
@@ -574,6 +590,7 @@ export function serialize(doc: Document): string {
             : {}),
           ...(p.layout && p.layout !== 'pattern' ? { layout: p.layout } : {}),
           ...(content ? { content } : {}),
+          ...(p.articleCover ? { articleCover: { ...p.articleCover } } : {}),
           ...(p.seed !== undefined ? { seed: p.seed } : {}),
           ...(p.edited !== undefined ? { edited: p.edited } : {}),
         };

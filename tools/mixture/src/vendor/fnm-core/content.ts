@@ -1,4 +1,4 @@
-import type { PageContent, PageContentPatch } from './types.js';
+import type { PageContent, PageContentPatch, PageLayoutId } from './types.js';
 
 /** Longest text a content field may hold (a guard for share links and files, far beyond any real headline). */
 export const MAX_CONTENT_TEXT = 1000;
@@ -13,7 +13,7 @@ const CONTENT_KEYS = new Set<string>([...TEXT_KEYS, 'ticker', 'logo', 'photo']);
 const PATCH_KEYS = new Set<string>([...TEXT_KEYS, 'ticker', 'logo']);
 const TICKER_KEYS = new Set(['show', 'left', 'right']);
 const LOGO_KEYS = new Set(['show']);
-const PHOTO_KEYS = new Set(['src', 'width', 'height']);
+const PHOTO_KEYS = new Set(['src', 'width', 'height', 'colour']);
 
 /** `image/*` raster data URL; SVG is refused because the photo becomes black-and-white pixels. */
 const IMAGE_DATA_URL = /^data:image\/(?!svg)[a-z0-9.+-]+(;[a-z0-9=._+-]+)*,.+/is;
@@ -39,6 +39,9 @@ export function photoProblem(photo: unknown): ContentProblem | null {
     height < 1
   ) {
     return { code: 'photo.invalidSize', message: 'The photo width and height must be positive whole pixels.' };
+  }
+  if (photo.colour !== undefined && photo.colour !== true) {
+    return { code: 'photo.invalid', message: 'A photo is in colour (colour: true) or, when the flag is absent, black and white.' };
   }
   return null;
 }
@@ -136,7 +139,12 @@ export function cleanContent(content: PageContent): PageContent | undefined {
   if (content.ticker) out.ticker = { show: content.ticker.show, left: content.ticker.left, right: content.ticker.right };
   if (content.logo) out.logo = { show: content.logo.show };
   if (content.photo) {
-    out.photo = { src: content.photo.src, width: content.photo.width, height: content.photo.height };
+    out.photo = {
+      src: content.photo.src,
+      width: content.photo.width,
+      height: content.photo.height,
+      ...(content.photo.colour ? { colour: true as const } : {}),
+    };
   }
   return Object.keys(out).length > 0 ? out : undefined;
 }
@@ -161,4 +169,13 @@ export function withoutPhoto(content: PageContent | undefined): PageContent | un
   if (!content?.photo) return content;
   const { photo: _photo, ...rest } = content;
   return cleanContent(rest);
+}
+
+/**
+ * The content a Page of `layout` may hold: the brand guideline allows only a black-and-white photo, and an Article cover
+ * is the one layout that takes a colour one (ADR 0010). On any other layout a colour photo is left out and the rest of the
+ * content stays. The one place this rule lives: the commands, Create's copy of the Editor Page and the web all use it.
+ */
+export function contentAllowedOn(layout: PageLayoutId | undefined, content: PageContent | undefined): PageContent | undefined {
+  return content?.photo?.colour && layout !== 'article-cover' ? withoutPhoto(content) : content;
 }

@@ -1,5 +1,9 @@
 export type {
+  ArticleCoverSettings,
   Block,
+  HighlightColour,
+  PhotoEdge,
+  FadeDirection,
   Colourway,
   ColourwayGroup,
   Command,
@@ -38,6 +42,25 @@ export type {
 export type { BrandColourName } from './colourway.js';
 
 export { execute } from './execute.js';
+export {
+  articleCoverSettings,
+  colourPhotoProblem,
+  DEFAULT_FADE_DIRECTION,
+  defaultFadeLength,
+  DEFAULT_FADE_LENGTH,
+  FADE_DIRECTIONS,
+  DEFAULT_PHOTO_EDGE,
+  fadeRampCells,
+  FADE_LENGTH_RANGE,
+  HIGHLIGHT_COLOURS,
+  highlightHex,
+  holdsArticleCover,
+  pageFills,
+  PHOTO_EDGES,
+  stepEdgeCuts,
+  tintFill,
+  type PageFills,
+} from './articleCover.js';
 export type { ExecuteResult } from './execute.js';
 export { gridFor } from './grid.js';
 export { renderSvg, type RenderOptions } from './renderer.js';
@@ -55,6 +78,7 @@ export { composeScene } from './composedScene.js';
 export type {
   ComposeOptions,
   ComposedScene,
+  SceneFade,
   SceneLogo,
   SceneOutline,
   ScenePhoto,
@@ -64,6 +88,17 @@ export type {
   SceneTextRole,
   SceneTextRun,
 } from './composedScene.js';
+export {
+  bakeFade,
+  bakeRequestOf,
+  PhotoBakeError,
+  photoBakeCrop,
+  photoBakeKey,
+  photoBakeRequest,
+  type PhotoBakeRequest,
+  type PhotoBaker,
+  type Rgba,
+} from './photoBake.js';
 export { LOGO_I_HEIGHT, LOGO_VIEWBOX, LOGO_PATH_DATA } from './logo.js';
 export { exportFileName } from './export.js';
 export {
@@ -81,12 +116,17 @@ export {
   LOGO_MARGIN_OF_SHORT_SIDE,
   LOGO_MIN_HEIGHT_PX,
   LOGO_WIDTH_OF_SHORT_SIDE,
+  articleCoverEdge,
+  articleCoverPatternArea,
+  fadeDirectionOf,
+  fadeLengthMax,
   layoutSlots,
   layoutSlotsFor,
   layoutTextZone,
   logoBox,
   cellsCovering,
   orientationFor,
+  type ArticleCoverEdge,
   type CellRect,
   type FracRect,
   type LayoutSlot,
@@ -99,7 +139,7 @@ export {
 } from './layouts.js';
 export { TEXT_NAVY, TEXT_WHITE, fillUnderSlot, textColourFor, uniformFillUnder } from './textColour.js';
 export { logoPlacement, type LogoPlacement } from './logoPlacement.js';
-export { MAX_CONTENT_TEXT, photoProblem, type ContentProblem } from './content.js';
+export { contentAllowedOn, MAX_CONTENT_TEXT, photoProblem, withoutPhoto, type ContentProblem } from './content.js';
 export {
   FORMATS,
   DENSITY_TABLES,
@@ -190,6 +230,7 @@ export {
 export {
   REFERENCE_PATTERNS,
   LATEST_REFERENCE_SET,
+  AREA_RESAMPLE_SET,
   referencePatternsFor,
   REFERENCE_SIZE,
   patternSimilarity,
@@ -205,5 +246,17 @@ export {
   type SimilarityFilter,
   type SimilarityResult,
 } from './referencePatterns.js';
+export { templateMask } from './templateMode.js';
+export {
+  INITIAL_COST_STEPS,
+  presetBricks,
+  type BrickGridSide,
+  type InvestmentStyle,
+  type PresetBrick,
+  type PresetEntry,
+  type Risk,
+  type RiskLevel,
+  type Strategy,
+} from './preset.js';
 
 export * from './text/index.js';
