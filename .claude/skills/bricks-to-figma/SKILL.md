@@ -19,7 +19,7 @@ Writes the geometry of the `Brick` vectors on the Bricks page and nothing else. 
 
 ## What the page must hold
 
-For each of the 34 exported Plan types, one component set `Brick/<Plan type name>` with exactly five variants: `Size=2x2`, `Size=4x4`, `Size=8x8`, `Size=16x16` and `Size=32x32`. Each variant is a 24×24 component holding one vector named `Brick`.
+For each of the 34 exported Plan types, one component set `Brick/<Plan type name>` with exactly five variants: `Size=2x2`, `Size=4x4`, `Size=8x8`, `Size=16x16` and `Size=32x32`. Each variant is a 24×24 component with one vector named `Brick` in it.
 
 - `Size=32x32` takes the Brick of the 16×16 Brick grid: Mixture has no 32×32 Brick grid.
 - Three component sets hold a rectangle `Tile` behind the `Brick`: `Brick/RMF for Retirement`, `Brick/Savings` and `Brick/KKP Finsave`. Their Brick is written into the 18×18 box 3 px inside the frame, so the Tile stays a border around it.
