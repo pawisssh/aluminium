@@ -23,12 +23,16 @@ A Plan type's icon: a single-colour Pattern-Builder Pattern on the Brick grid, s
 _Avoid_: Block (one rectangle inside a Pattern, in the Pattern Builder), pattern block, icon, pixel art
 
 **Strategy**:
-A Plan type's six values in the Pattern Guidelines: Content Type, Investment Style, Initial Cost, Monthly Cost, Risk and Expected Return. It sets the Plan type's Brick: Investment Style the Brick family and how the Blocks join, Risk the Slope, Initial Cost the size of the largest Block.
+A Plan type's six values in the Pattern Guidelines: Content Type, Investment Style, Initial Cost, Monthly Cost, Risk and Expected Return. It sets the Plan type's Brick: Investment Style the Brick family and how the Blocks join, Risk the Slope, Initial Cost the shape of the largest Block.
 _Avoid_: positioning, profile
 
 **Investment Style**:
-How money goes into a Plan type: One-time, Dollar Cost Average or Market Timing. One-time draws a rising Brick joined by edges, Dollar Cost Average a rising Brick joined at corners, Market Timing a mountain Brick.
+How money goes into a Plan type: One-time, Dollar Cost Average or Market Timing. One-time draws a rising or hanging Brick joined by edges, Dollar Cost Average a rising or hanging Brick joined at corners, Market Timing a mountain Brick.
 _Avoid_: Connected (the Pattern Guidelines' word for joined by edges), Disconnected (its word for joined at corners)
+
+**Initial Cost**:
+The least a customer puts into a Plan type to start, on seven steps: 1, 5,000, 20,000, 50,000, 500,000, 2,000,000 and 10,000,000 baht. Up to 50,000 the largest Block is narrow and grows taller with each step; from 500,000 it is wide.
+_Avoid_: minimum investment
 
 **Risk**:
 How much a Plan type's value can swing: low, medium or high, drawn as a Flat, Half or 75% Slope. A range takes its middle, rounded up, and a Market Timing Plan type stops at Half.
@@ -43,7 +47,7 @@ A Plan type's artwork on the plan picker (the Plan Select Figma file), read off 
 _Avoid_: thumbnail, artwork (on its own)
 
 **Brick grid**:
-The cells every Brick is drawn on: 4×4 by default, or 8×8, 16×16 or a portrait grid (4×6, 8×12) to see how Bricks read at other sizes. One setting for all Bricks.
+The cells every Brick is drawn on: 4×4 by default, or 8×8, 16×16 or a portrait grid (4×6, 8×12) to see how Bricks read at other sizes. One setting for all Bricks. A Plan type's Brick goes to the Bricks page in Figma on four: 2×2, 4×4, 8×8 and 16×16.
 _Avoid_: Brick size
 _Avoid in code_: canvas
 
