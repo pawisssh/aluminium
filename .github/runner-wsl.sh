@@ -317,7 +317,8 @@ if ( set -e
      jq -e . .claude/*.json >/dev/null
      for f in scripts/*.sh .githooks/*; do sh -n "$f"; done
      sh scripts/test-hooks.sh
-     for f in scripts/*.mjs tools/*/scripts/*.mjs; do node --check "$f"; done ) >"$CHECK_DIR.log" 2>&1; then
+     for f in scripts/*.mjs tools/*/scripts/*.mjs; do node --check "$f"; done
+     node --test scripts/*.test.mjs ) >"$CHECK_DIR.log" 2>&1; then
   say "The checks passed."
 else
   warn "A check failed. The last lines:"
