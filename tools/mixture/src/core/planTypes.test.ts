@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { generateBrick } from './brick'
 import { colourKey, familyTints } from './colours'
-import { defaultPlanTypes, drawPlanTypes, exportedPlanTypes, planTypesJson } from './planTypes'
+import { defaultPlanTypes, drawPlanTypes, exportedPlanTypes, isExported, planTypesJson } from './planTypes'
 import RAW from './planTypes.json?raw'
 import type { Strategy, StrategyValue } from './strategy'
 
@@ -37,14 +37,37 @@ describe('exportedPlanTypes', () => {
     expect(exported).toHaveLength(34)
     expect(exported.map((t) => t.id)).toEqual(BRICKS_PAGE.flat())
   })
+
+  it('fails, naming the Plan type, when one has a Collection but no Strategy', () => {
+    const { strategy: _, ...goal } = defaultPlanTypes().find((t) => t.id === 'goal')!
+    expect(() => exportedPlanTypes([goal])).toThrow('Plan type "Goal" (goal) has the Collection "Goals" but no Strategy: an exported Plan type needs both.')
+  })
+
+  it('fails, naming the Plan type, when its Collection is not one of the eight', () => {
+    const goal = defaultPlanTypes().find((t) => t.id === 'goal')!
+    expect(() => exportedPlanTypes([{ ...goal, collection: 'Goal' }])).toThrow('Plan type "Goal" (goal) has the Collection "Goal", which is not one of the eight in collections.json.')
+  })
 })
 
-// The Strategy table the brand designer approved on 2026-11-11 (issue #15), by Plan type id.
+describe('isExported', () => {
+  const types = defaultPlanTypes()
+  const goal = types.find((t) => t.id === 'goal')!
+
+  it('holds for a Plan type with one of the eight Collections and a Strategy, and for no other', () => {
+    expect(types.filter(isExported).map((t) => t.id).sort()).toEqual(BRICKS_PAGE.flat().sort())
+    expect(isExported({ ...goal, strategy: undefined })).toBe(false)
+    expect(isExported({ ...goal, collection: undefined })).toBe(false)
+    expect(isExported({ ...goal, collection: 'Goal' })).toBe(false)
+  })
+})
+
+// Each exported Plan type's Strategy, by Plan type id: the Strategy table of issue #15, which the
+// brand designer approved on 2026-11-11.
 const ONE_TIME = 'one-time'
 const DCA = 'dollar-cost-average'
 const TIMING = 'market-timing'
 const ALL_THREE: StrategyValue[] = ['investmentStyle', 'risk', 'initialCost']
-const APPROVED: Record<string, Strategy> = {
+const STRATEGIES: Record<string, Strategy> = {
   'definit-global-select': { investmentStyle: ONE_TIME, risk: 'high', initialCost: 500_000, guesses: ALL_THREE },
   'gmi': { investmentStyle: ONE_TIME, risk: 'medium', initialCost: 500_000 },
   'diy': { investmentStyle: ONE_TIME, risk: 'medium', initialCost: 1, guesses: ['risk'] },
@@ -105,8 +128,8 @@ describe('an exported Plan type', () => {
     }
   })
 
-  it('has the Strategy of the approved table, with every guess in the table marked as a guess', () => {
-    expect(Object.fromEntries(exported.map((t) => [t.id, t.strategy]))).toEqual(APPROVED)
+  it('has the Strategy the Strategy table of issue #15 gives it, with every guess in the table marked as a guess, in ten Plan types', () => {
+    expect(Object.fromEntries(exported.map((t) => [t.id, t.strategy]))).toEqual(STRATEGIES)
     expect(exported.filter((t) => t.strategy.guesses).map((t) => t.id)).toHaveLength(10)
   })
 
@@ -148,19 +171,19 @@ describe('a Plan type that is not exported', () => {
   })
 })
 
-describe('the six new Plan types', () => {
-  const NEW = ['definit-global-select', 'definit-set-select', 'rmf', 'thai-esg', 'money-market', 'kkp-finsave']
+describe('the six Plan types left out of draws', () => {
+  const OUT_OF_DRAWS = ['definit-global-select', 'definit-set-select', 'rmf', 'thai-esg', 'money-market', 'kkp-finsave']
   const types = defaultPlanTypes()
 
   it('each have a Plan colour of a Tint its colour family has', () => {
-    for (const id of NEW) {
+    for (const id of OUT_OF_DRAWS) {
       const type = types.find((t) => t.id === id)!
       expect(familyTints(type.colour.family), id).toContain(type.colour.tint)
     }
   })
 
-  it('are the only Plan types left out of draws', () => {
-    expect(types.filter((t) => !t.inDraws).map((t) => t.id).sort()).toEqual([...NEW].sort())
+  it('are the two Definit Select Plan types, RMF for Retirement, Thai ESG, Money Market and KKP Finsave, and no other', () => {
+    expect(types.filter((t) => !t.inDraws).map((t) => t.id).sort()).toEqual([...OUT_OF_DRAWS].sort())
   })
 })
 
@@ -175,6 +198,14 @@ describe('planTypesJson', () => {
     expect(written).toBe(
       '[\n  { "id": "goal", "name": "Goal", "family": "orange", "tint": 100, "collection": "Goals", "strategy": { "investmentStyle": "dollar-cost-average", "risk": ["low", "high"], "initialCost": 20000, "monthlyCost": 1000, "expectedReturn": "5-7%", "contentType": "Goal based", "guesses": ["monthlyCost"] }, "inDraws": true }\n]\n',
     )
+  })
+})
+
+describe('planTypesJson for a Strategy with a value it has no place for', () => {
+  it('fails, naming the Plan type and the value, so none is left out of the file silently', () => {
+    const goal = defaultPlanTypes().find((t) => t.id === 'goal')!
+    const strategy = { ...goal.strategy!, yearlyCost: 12_000 } as Strategy
+    expect(() => planTypesJson([{ ...goal, strategy }])).toThrow('The Strategy of Plan type "Goal" (goal) has a field the file does not write: "yearlyCost".')
   })
 })
 

@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react'
 import { Check, Copy, Dices, Plus, Search, Trash2 } from 'lucide-react'
-import { BRICK_GRIDS, brickDefaults, generateBrick, type BrickGrid, type BrickSettings } from '@/core/brick'
+import { BRICK_FAMILY_LABELS, BRICK_GRIDS, SLOPE_LABELS, brickDefaults, generateBrick, type BrickGrid, type BrickSettings } from '@/core/brick'
 import { COLOUR_FAMILIES, colourHex, familyTints, type ColourFamily, type Tint } from '@/core/colours'
-import { pickedBrick, planTypeBrick, type PickedBrick } from '@/core/pickedBricks'
+import { pickedBrick, planTypeBrick, storedBrickLine, type PickedBrick } from '@/core/pickedBricks'
 import { closestBricks, coverMatch, planCover, type CoverCandidate } from '@/core/planCovers'
-import { planTypesJson, type PlanType } from '@/core/planTypes'
-import { strategyLine, type Strategy } from '@/core/strategy'
+import { isExported, planTypesJson, type PlanType } from '@/core/planTypes'
+import { strategyParts, type Strategy } from '@/core/strategy'
 import { generateRandomSeed, id } from '@/playground'
 import { blockCountRangeFor } from '@/vendor/fnm-core/generator'
 import type { PatternFamily, Slope } from '@/vendor/fnm-core/types'
@@ -18,17 +18,8 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { BrickIcon, CellGrid } from './icons'
 
 const FAMILY_ITEMS = (Object.keys(COLOUR_FAMILIES) as ColourFamily[]).map((f) => ({ value: f, label: COLOUR_FAMILIES[f].label }))
-const PATTERN_FAMILIES: { value: PatternFamily; label: string }[] = [
-  { value: 'auto', label: 'Auto' },
-  { value: 'rising', label: 'Rising' },
-  { value: 'hanging', label: 'Hanging' },
-  { value: 'mountain', label: 'Mountain' },
-]
-const SLOPES: { value: Slope; label: string }[] = [
-  { value: 'flat', label: 'Flat' },
-  { value: 'half', label: 'Half' },
-  { value: '75', label: '75%' },
-]
+const PATTERN_FAMILIES = (Object.keys(BRICK_FAMILY_LABELS) as PatternFamily[]).map((value) => ({ value, label: BRICK_FAMILY_LABELS[value] }))
+const SLOPES = (Object.keys(SLOPE_LABELS) as Slope[]).map((value) => ({ value, label: SLOPE_LABELS[value] }))
 
 const gridKey = (g: BrickGrid) => `${g.cols}x${g.rows}`
 const percent = (match: number) => `${Math.round(match * 100)}%`
@@ -94,7 +85,7 @@ export function PlanTypes({
           <Button
             variant="secondary"
             title="New seeds for the hand-set Bricks; an exported Plan type keeps the Brick picked from its Strategy"
-            onClick={() => onChange(planTypes.map((t) => (t.collection === undefined && t.brick ? { ...t, brick: { ...t.brick, seed: generateRandomSeed() } } : t)))}
+            onClick={() => onChange(planTypes.map((t) => (!isExported(t) && t.brick ? { ...t, brick: { ...t.brick, seed: generateRandomSeed() } } : t)))}
           >
             <Dices /> Shuffle hand-set Bricks
           </Button>
@@ -148,7 +139,7 @@ function PlanTypeCard({
   onRemove: () => void
 }) {
   // An exported Plan type draws the stored Brick the rule picked; only one that is not exported has a hand-set Brick to edit.
-  const exported = type.collection !== undefined
+  const exported = isExported(type)
   const picked = exported ? pickedBrick(type.id, brickGrid) : undefined
   const handSet = exported ? undefined : type.brick
   const brick = planTypeBrick(type, brickGrid)
@@ -208,7 +199,7 @@ function PlanTypeCard({
         </div>
       </div>
 
-      {type.collection && type.strategy && <CollectionAndStrategy collection={type.collection} strategy={type.strategy} />}
+      {isExported(type) && <CollectionAndStrategy collection={type.collection} strategy={type.strategy} />}
 
       {picked && <PickedBrickLine brick={picked} brickGrid={brickGrid} />}
 
@@ -343,12 +334,9 @@ function HandSetBrick({
 
 /** What the rule picked for an exported Plan type on the current Brick grid, read-only: it changes by changing the Strategy in `planTypes.json` and running `npm run bricks:pick` again. */
 function PickedBrickLine({ brick, brickGrid }: { brick: PickedBrick; brickGrid: BrickGrid }) {
-  const family = PATTERN_FAMILIES.find((f) => f.value === brick.family)?.label
-  const slope = SLOPES.find((s) => s.value === brick.slope)?.label
   return (
     <p className="text-xs text-muted-foreground" title="Picked from the Strategy by npm run bricks:pick">
-      Brick from the Strategy: {family} · {slope} · largest Block {brick.largestBlock.w}×{brick.largestBlock.h} · {brick.exact ? 'meets the Initial Cost target' : 'nearest to the Initial Cost target'}
-      {brickGrid.rows !== brickGrid.cols && ` · settings of the ${brickGrid.cols}×${brickGrid.cols} Brick grid`}
+      {storedBrickLine(brick, brickGrid)}
     </p>
   )
 }
@@ -360,7 +348,7 @@ function CollectionAndStrategy({ collection, strategy }: { collection: string; s
       <span className="rounded-md bg-muted px-1.5 py-0.5 font-medium" title="Collection on the Bricks page in Figma">
         {collection}
       </span>
-      {strategyLine(strategy).map((part) => (
+      {strategyParts(strategy).map((part) => (
         <span key={part.value} className="flex items-center gap-1.5">
           <span className="text-muted-foreground" aria-hidden>
             ·

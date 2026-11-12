@@ -14,7 +14,7 @@ describe('planCover', () => {
     expect(planCover('thai-stocks')).toBeUndefined()
   })
 
-  it('keeps every Plan Cover with its Plan type through the renames, and has none for the six new Plan types', () => {
+  it('keeps every Plan Cover with its Plan type through the renames, and has none for the six Plan types left out of draws', () => {
     const names = new Map(defaultPlanTypes().map((t) => [t.id, t.name]))
     const covers: Record<string, { figmaNode: string }> = PLAN_COVERS
     for (const id of Object.keys(covers)) expect(names.has(id), id).toBe(true)

@@ -38,10 +38,10 @@ describe('pickBricks', () => {
 })
 
 describe('pickSummary', () => {
-  it('counts the Bricks that are exact, the different drawings and the hanging Bricks', () => {
+  it('counts the Bricks, those that are exact, the different drawings and the hanging Bricks', () => {
     const rising: PickedBrick = { family: 'rising', slope: 'half', blockCount: 3, guidance: 60, cornerMeetLimit: 0, seed: 'a', largestBlock: { w: 2, h: 2 }, exact: true }
     const hanging: PickedBrick = { ...rising, family: 'hanging', exact: false }
     // The second Plan type repeats the first one's drawing.
-    expect(pickSummary({ one: rising, two: { ...rising, exact: false }, three: hanging, four: { ...hanging, seed: 'b' } }, 4)).toEqual({ bricks: 4, exact: 1, distinct: 3, hanging: 2 })
+    expect(pickSummary({ one: rising, two: { ...rising, exact: false }, three: hanging, four: { ...hanging, seed: 'b' } }, 4)).toEqual({ count: 4, exact: 1, distinct: 3, hanging: 2 })
   })
 })

@@ -31,6 +31,13 @@ export const BRICK_GRIDS: { grid: BrickGrid; label: string }[] = [
 
 export const DEFAULT_BRICK_GRID: BrickGrid = { cols: 4, rows: 4 }
 
+/** The square Brick grid of `side` cells across and down. */
+export const squareBrickGrid = (side: number): BrickGrid => ({ cols: side, rows: side })
+
+/** Each Brick family and each Slope as the Bricks tab words it, in the order it lists them. */
+export const BRICK_FAMILY_LABELS: Record<PatternFamily, string> = { auto: 'Auto', rising: 'Rising', hanging: 'Hanging', mountain: 'Mountain' }
+export const SLOPE_LABELS: Record<Slope, string> = { flat: 'Flat', half: 'Half', '75': '75%' }
+
 /** The Pattern Builder settings a Brick uses when it doesn't set its own. */
 export function brickDefaults(grid: BrickGrid = DEFAULT_BRICK_GRID) {
   return { blockCount: defaultBlockCountFor({ ...grid, cellW: 1, cellH: 1 }), guidance: 60, cornerMeetLimit: 1 }

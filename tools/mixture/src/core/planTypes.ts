@@ -1,5 +1,6 @@
 import { colourKey, type ColourFamily, type PlanColour, type Tint } from './colours'
 import type { BrickSettings } from './brick'
+import { everyJsonField, jsonFields } from './jsonLine'
 import type { Strategy } from './strategy'
 import type { PatternFamily, Slope } from '@/vendor/fnm-core/types'
 // The eight Collections, in the order of the Bricks page in Figma.
@@ -18,7 +19,7 @@ export interface PlanType {
   id: string
   name: string
   colour: PlanColour
-  /** The Collection its Brick is filed under. A Plan type is exported exactly when it has one. */
+  /** The Collection its Brick is filed under: one of the eight. Only an exported Plan type has one (see `isExported`). */
   collection?: string
   /** Every exported Plan type has one; the rest have none. */
   strategy?: Strategy
@@ -40,28 +41,41 @@ export function defaultPlanTypes(): PlanType[] {
   }))
 }
 
-/** A Plan type with a Collection and a Strategy: one whose Brick goes to the Bricks page in Figma. */
+/** A Plan type with one of the eight Collections and a Strategy: one whose Brick goes to the Bricks page in Figma. */
 export type ExportedPlanType = PlanType & { collection: string; strategy: Strategy }
 
-/** The exported Plan types, Collection by Collection in the order of the Bricks page in Figma, each Collection in the order given. */
+/** Whether a Plan type is exported: it has one of the eight Collections and a Strategy. Every place that asks, asks here. */
+export function isExported<T extends Pick<PlanType, 'collection' | 'strategy'>>(type: T): type is T & Pick<ExportedPlanType, 'collection' | 'strategy'> {
+  return type.collection !== undefined && COLLECTIONS.includes(type.collection) && type.strategy !== undefined
+}
+
+/**
+ * The exported Plan types, Collection by Collection in the order of the Bricks page in Figma, each
+ * Collection in the order given. It throws, naming the Plan type, when one has a Collection but is
+ * not exported: with no Strategy, or with a Collection that is not one of the eight.
+ */
 export function exportedPlanTypes(types: PlanType[]): ExportedPlanType[] {
-  const exported = types.filter((t): t is ExportedPlanType => t.collection !== undefined && t.strategy !== undefined)
+  for (const type of types) {
+    if (type.collection === undefined || isExported(type)) continue
+    const named = `Plan type "${type.name}" (${type.id}) has the Collection "${type.collection}"`
+    throw new Error(COLLECTIONS.includes(type.collection) ? `${named} but no Strategy: an exported Plan type needs both.` : `${named}, which is not one of the eight in collections.json.`)
+  }
+  const exported = types.filter(isExported)
   return COLLECTIONS.flatMap((collection) => exported.filter((t) => t.collection === collection))
 }
 
-/** Plan types written out as `planTypes.json` is: one line each, so a saved set diffs cleanly. */
+/** A Strategy's fields in the order `planTypes.json` writes them. */
+const STRATEGY_FIELDS = ['investmentStyle', 'risk', 'initialCost', 'monthlyCost', 'expectedReturn', 'contentType', 'guesses'] as const satisfies readonly (keyof Strategy)[]
+
+/**
+ * Plan types written out as `planTypes.json` is: one line each, so a saved set diffs cleanly. It
+ * throws, naming the Plan type, when a Strategy has a field that is not in `STRATEGY_FIELDS`.
+ */
 export function planTypesJson(types: PlanType[]): string {
-  // JSON with a space after each comma, as the file has it.
-  const value = (v: unknown): string => (Array.isArray(v) ? `[${v.map(value).join(', ')}]` : JSON.stringify(v))
-  const fields = (entries: [string, unknown][]) =>
-    entries
-      .filter(([, v]) => v !== undefined)
-      .map(([k, v]) => `${JSON.stringify(k)}: ${value(v)}`)
-      .join(', ')
   const lines = types.map(({ id, name, colour, collection, strategy: s, brick: b, inDraws }) => {
-    const strategy = s && `, "strategy": { ${fields([['investmentStyle', s.investmentStyle], ['risk', s.risk], ['initialCost', s.initialCost], ['monthlyCost', s.monthlyCost], ['expectedReturn', s.expectedReturn], ['contentType', s.contentType], ['guesses', s.guesses]])} }`
-    const brick = b && `, "brick": { ${fields([['family', b.family], ['slope', b.slope], ['seed', b.seed], ['guidance', b.guidance], ['blockCount', b.blockCount], ['cornerMeetLimit', b.cornerMeetLimit]])} }`
-    return `  { ${fields([['id', id], ['name', name], ['family', colour.family], ['tint', colour.tint], ['collection', collection]])}${strategy ?? ''}${brick ?? ''}, "inDraws": ${inDraws} }`
+    const strategy = s && `, "strategy": { ${everyJsonField(s, STRATEGY_FIELDS, `The Strategy of Plan type "${name}" (${id})`)} }`
+    const brick = b && `, "brick": { ${jsonFields(b, ['family', 'slope', 'seed', 'guidance', 'blockCount', 'cornerMeetLimit'])} }`
+    return `  { ${jsonFields({ id, name, family: colour.family, tint: colour.tint, collection }, ['id', 'name', 'family', 'tint', 'collection'])}${strategy ?? ''}${brick ?? ''}, "inDraws": ${inDraws} }`
   })
   return `[\n${lines.join(',\n')}\n]\n`
 }

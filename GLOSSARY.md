@@ -13,6 +13,10 @@ _Avoid in code_: product
 One kind of Plan a customer can hold, such as GMI or หุ้นไทย, with a name, a Plan colour and a Brick. Random draws pick only the Plan types that are in draws.
 _Avoid_: Brick (the Plan type's drawing, not the Plan type), offering
 
+**Exported Plan type**:
+A Plan type whose Brick goes to the Bricks page in Figma: one with a Collection and a Strategy. Its Brick is picked from its Strategy and kept as a stored Brick. 34 of the 38 Plan types are exported; the other four each have a hand-set Brick.
+_Avoid_: Figma Plan type, official Plan type
+
 **Portfolio**:
 A named group of Plans, such as Investments, Retirement or Cash.
 _Avoid_: group, bucket
@@ -21,6 +25,14 @@ _Avoid in code_: Port
 **Brick**:
 A Plan type's icon: a single-colour Pattern-Builder Pattern on the Brick grid, so it is one piece joined by edges or corners and has a Brick family and a Slope.
 _Avoid_: Block (one rectangle inside a Pattern, in the Pattern Builder), pattern block, icon, pixel art
+
+**Stored Brick**:
+An exported Plan type's Brick on one of the four square Brick grids, as the rule picked it from the Strategy and `pickedBricks.json` holds it: the generator settings and seed that redraw it, its largest Block, and whether that meets the Initial Cost target exactly. It changes only by changing the Strategy and running the pick again.
+_Avoid_: picked Brick, saved Brick
+
+**Hand-set Brick**:
+The Brick of a Plan type that is not exported: generator settings and a seed chosen by hand on the Bricks tab and kept in `planTypes.json`, with no Strategy behind it.
+_Avoid_: manual Brick, custom Brick
 
 **Strategy**:
 A Plan type's six values in the Pattern Guidelines: Content Type, Investment Style, Initial Cost, Monthly Cost, Risk and Expected Return. It sets the Plan type's Brick: Investment Style the Brick family and how the Blocks join, Risk the Slope, Initial Cost the shape of the largest Block.
@@ -39,11 +51,11 @@ How much a Plan type's value can swing: low, medium or high, drawn as a Flat, Ha
 _Avoid_: risk level
 
 **Collection**:
-One of the eight sets a Plan type's Brick is filed under on the Bricks page in Figma, such as Guru Port or Cash. A Plan type is in exactly one.
+One of the eight sets an exported Plan type's Brick is filed under on the Bricks page in Figma, such as Guru Port or Cash. An exported Plan type is in exactly one; a Plan type that is not exported is in none.
 _Avoid_: playlist (the plan picker's own sets, where a plan can sit in several), category
 
 **Plan Cover**:
-A Plan type's artwork on the plan picker (the Plan Select Figma file), read off its rectangles onto 16×16 cells. Of the Bricks a Plan type's Strategy allows, the one that overlaps its Plan Cover most is its Brick, with the Brick scaled up to 16×16.
+A Plan type's artwork on the plan picker (the Plan Select Figma file), read off its rectangles onto 16×16 cells. It is the last thing that decides an exported Plan type's Brick: of the Bricks its Strategy allows, the Brick is the one whose largest Block is nearest the Initial Cost target, then one no earlier Plan type took, and only then the one that overlaps the Plan Cover most, with the Brick scaled up to 16×16.
 _Avoid_: thumbnail, artwork (on its own)
 
 **Brick grid**:

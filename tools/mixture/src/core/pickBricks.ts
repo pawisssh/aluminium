@@ -1,4 +1,4 @@
-import { generateBrick } from './brick'
+import { generateBrick, squareBrickGrid } from './brick'
 import { planCover } from './planCovers'
 import { exportedPlanTypes, type PlanType } from './planTypes'
 import type { PickedBrick } from './pickedBricks'
@@ -6,19 +6,26 @@ import { presetBricks, type BrickGridSide } from '@/vendor/fnm-core/preset'
 
 /** What the pick command prints for one Brick grid. */
 export interface PickSummary {
-  bricks: number
+  /** Bricks picked: one for each exported Plan type. */
+  count: number
   /** Bricks whose largest Block meets the Initial Cost target. */
   exact: number
   /** Different drawings among the Bricks. */
   distinct: number
+  /**
+   * Bricks of the hanging Brick family. One-time and Dollar Cost Average draw a rising or a
+   * hanging Brick alike, so the Strategy does not say how many come out hanging. The prototype
+   * reported the number for each Brick grid (issue #15: 15, 16, 13 and 17 of 34 on 2×2 to 16×16),
+   * and the pick command prints it to be read against those.
+   */
   hanging: number
 }
 
 export function pickSummary(bricks: Record<string, PickedBrick>, side: BrickGridSide): PickSummary {
   const picked = Object.values(bricks)
-  const drawings = picked.map((brick) => JSON.stringify(generateBrick(brick, { cols: side, rows: side })))
+  const drawings = picked.map((brick) => JSON.stringify(generateBrick(brick, squareBrickGrid(side))))
   return {
-    bricks: picked.length,
+    count: picked.length,
     exact: picked.filter((brick) => brick.exact).length,
     distinct: new Set(drawings).size,
     hanging: picked.filter((brick) => brick.family === 'hanging').length,

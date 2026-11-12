@@ -43,7 +43,7 @@ export interface StrategyPart {
 }
 
 /** A Strategy read out value by value: Investment Style, Risk and Initial Cost, then the other three where it has them. */
-export function strategyLine(strategy: Strategy): StrategyPart[] {
+export function strategyParts(strategy: Strategy): StrategyPart[] {
   const parts: [StrategyValue, string | undefined][] = [
     ['investmentStyle', INVESTMENT_STYLES[strategy.investmentStyle]],
     ['risk', `Risk ${[strategy.risk].flat().join(' to ')}`],

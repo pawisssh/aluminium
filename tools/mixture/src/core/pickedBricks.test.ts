@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { BrickGrid } from './brick'
-import { pickedBrick, pickedBricksJson, planTypeBrick, planTypeBrickCells, type PickedBrick } from './pickedBricks'
+import { pickedBrick, pickedBricksJson, planTypeBrick, planTypeBrickCells, storedBrickLine, type PickedBrick } from './pickedBricks'
 import STORED from './pickedBricks.json'
 import RAW from './pickedBricks.json?raw'
 import { defaultPlanTypes, exportedPlanTypes } from './planTypes'
@@ -101,6 +101,12 @@ describe('planTypeBrick', () => {
     expect(pieces(cells, true)).toBe(1)
   })
 
+  it('asks the one test of exported: a Plan type with a Collection but no Strategy is not, and keeps its hand-set Brick', () => {
+    const { strategy: _, ...noStrategy } = gmi
+    const handSet = { family: 'rising' as const, slope: 'flat' as const, seed: 'by-hand' }
+    expect(planTypeBrick({ ...noStrategy, brick: handSet }, { cols: 4, rows: 4 })).toEqual(handSet)
+  })
+
   it('gives a Plan type that is not exported its hand-set Brick on every Brick grid', () => {
     const call = types.find((t) => t.id === 'investment-call')!
     for (const grid of [...SQUARE_GRIDS, { cols: 4, rows: 6 }]) expect(planTypeBrick(call, grid)).toEqual({ family: 'hanging', slope: 'half', seed: 'investment-call-4' })
@@ -116,5 +122,25 @@ describe('pickedBricksJson', () => {
       `{\n  "gmi": {\n    "2x2": ${line.replace('"blockCount": 3', '"blockCount": 1').replace('true', 'false')},\n    "4x4": ${line},\n    "8x8": ${line},\n    "16x16": ${line}\n  },\n  "goal": {\n    "2x2": ${line},\n    "4x4": ${line},\n    "8x8": ${line},\n    "16x16": ${line}\n  }\n}\n`,
     )
     expect(JSON.parse(written).gmi['2x2']).toEqual({ ...brick, blockCount: 1, exact: false })
+  })
+
+  it('fails, naming the Plan type, the Brick grid and the field, when a Brick has a field it has no place for, so none is left out of the file silently', () => {
+    const brick: PickedBrick = { family: 'hanging', slope: '75', blockCount: 3, guidance: 60, cornerMeetLimit: 0, seed: 'preset-7', largestBlock: { w: 2, h: 3 }, exact: true }
+    const mirrored = { ...brick, mirrored: true } as PickedBrick
+    expect(() => pickedBricksJson({ gmi: { '2x2': brick, '4x4': brick, '8x8': mirrored, '16x16': brick } })).toThrow('The Brick of gmi on 8x8 has a field the file does not write: "mirrored".')
+  })
+})
+
+describe('storedBrickLine', () => {
+  const brick: PickedBrick = { family: 'hanging', slope: '75', blockCount: 3, guidance: 60, cornerMeetLimit: 0, seed: 'preset-7', largestBlock: { w: 2, h: 3 }, exact: true }
+
+  it('reads out a stored Brick on a square Brick grid: its Brick family, its Slope, its largest Block and whether that meets the Initial Cost target', () => {
+    expect(storedBrickLine(brick, { cols: 4, rows: 4 })).toBe('Brick from the Strategy: Hanging · 75% · largest Block 2×3 · meets the Initial Cost target')
+    expect(storedBrickLine({ ...brick, family: 'mountain', slope: 'half', exact: false }, { cols: 16, rows: 16 })).toBe('Brick from the Strategy: Mountain · Half · largest Block 2×3 · nearest to the Initial Cost target')
+  })
+
+  it('leaves out the largest Block and the Initial Cost target on a portrait Brick grid, where the Brick is drawn differently, and says which Brick grid’s settings it has', () => {
+    expect(storedBrickLine(brick, { cols: 4, rows: 6 })).toBe('Brick from the Strategy: Hanging · 75% · settings of the 4×4 Brick grid')
+    expect(storedBrickLine({ ...brick, slope: 'flat', exact: false }, { cols: 8, rows: 12 })).toBe('Brick from the Strategy: Hanging · Flat · settings of the 8×8 Brick grid')
   })
 })
