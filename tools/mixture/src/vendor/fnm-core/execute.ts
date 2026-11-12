@@ -8,12 +8,13 @@ import {
   generatePatternDetailed,
   validateGeneratorParams,
 } from './generator.js';
-import { cleanContent, contentPatchProblem, mergeContent, photoProblem } from './content.js';
+import { ARTICLE_COVER_FORMAT, articleCoverProblem, COLOUR_PHOTO_REFUSED, holdsArticleCover } from './articleCover.js';
+import { cleanContent, contentAllowedOn, contentPatchProblem, mergeContent, photoProblem, withoutPhoto } from './content.js';
 import { gridFor } from './grid.js';
-import { layoutTextZone, LAYOUT_TABLE } from './layouts.js';
+import { articleCoverPatternArea, fadeDirectionOf, layoutTextZone, LAYOUT_TABLE } from './layouts.js';
 import { isPageEdited, materializePages, nextPageSeed, pageSeed, settlePages } from './pages.js';
 import { createRng, generateRandomSeed } from './prng.js';
-import { checkPatternRules, repairPatternRules } from './patternRules.js';
+import { remapPattern } from './patternRemap.js';
 import { LATEST_REFERENCE_SET } from './referencePatterns.js';
 import { validateDocument } from './serialization.js';
 import type { Block, Command, Document, Grid, Page, PageLayoutId, Rejection, TextZone, Warning } from './types.js';
@@ -24,87 +25,32 @@ function markEdited(pages: Page[], pageIndex: number): Page[] {
   return pages.map((p, i) => (i === pageIndex ? { ...p, edited: true } : p));
 }
 
-/** Scales one Block side to the new Grid: a whole number of cells from 1 to the Grid side (ADR 0007). */
-function scaleSide(raw: number, max: number): number {
-  return Math.max(1, Math.min(max, Math.round(raw)));
-}
-
-/**
- * Re-maps one Block proportionally onto a new Grid: its centre scales with the Grid,
- * and its size scales with it, rounded to whole cells.
- */
-function remapBlock(block: Block, oldGrid: Grid, newGrid: Grid): Block {
-  const colRatio = newGrid.cols / oldGrid.cols;
-  const rowRatio = newGrid.rows / oldGrid.rows;
-  const w = scaleSide(block.w * colRatio, newGrid.cols);
-  const h = scaleSide(block.h * rowRatio, newGrid.rows);
-  const col = Math.max(0, Math.min(newGrid.cols - w, Math.round((block.col + block.w / 2) * colRatio - w / 2)));
-  const row = Math.max(0, Math.min(newGrid.rows - h, Math.round((block.row + block.h / 2) * rowRatio - h / 2)));
-  return { ...block, col, row, w, h };
-}
-
-const overlaps = (a: Block, b: Block): boolean =>
-  a.col < b.col + b.w && b.col < a.col + a.w && a.row < b.row + b.h && b.row < a.row + a.h;
-
-/**
- * Restores Edge connect after per-Block snapping: for each pair that shared an edge before
- * the remap, slide the later Block (position only, so sizes stay as they are) until the edges
- * meet again. A slide is skipped when it would leave the Grid, overlap another Block, or lose
- * the shared stretch of edge.
- */
-function reconnectEdges(old: readonly Block[], next: Block[], newGrid: Grid): void {
-  const ranges = (a0: number, a1: number, b0: number, b1: number) => a0 < b1 && b0 < a1;
-  for (const axis of ['x', 'y', 'x', 'y'] as const) {
-    const order = old.map((_, i) => i).sort((i, j) => (axis === 'x' ? old[i]!.col - old[j]!.col : old[i]!.row - old[j]!.row));
-    for (const i of order) {
-      for (const j of order) {
-        const a = old[i]!;
-        const b = old[j]!;
-        const touching =
-          axis === 'x'
-            ? a.col + a.w === b.col && ranges(a.row, a.row + a.h, b.row, b.row + b.h)
-            : a.row + a.h === b.row && ranges(a.col, a.col + a.w, b.col, b.col + b.w);
-        if (!touching) continue;
-        const na = next[i]!;
-        const nb = next[j]!;
-        const moved = axis === 'x' ? { ...nb, col: na.col + na.w } : { ...nb, row: na.row + na.h };
-        if (moved.col === nb.col && moved.row === nb.row) continue;
-        if (moved.col + moved.w > newGrid.cols || moved.row + moved.h > newGrid.rows) continue;
-        const stillShares =
-          axis === 'x'
-            ? ranges(na.row, na.row + na.h, moved.row, moved.row + moved.h)
-            : ranges(na.col, na.col + na.w, moved.col, moved.col + moved.w);
-        if (!stillShares) continue;
-        if (next.some((o, k) => k !== j && overlaps(moved, o))) continue;
-        next[j] = moved;
-      }
-    }
-  }
-}
-
 /**
  * Format/Density change, per Page: an edited Page's Pattern is re-mapped onto the new Grid, an unedited Page is
  * regenerated from its own seed (a one-Page Document behaves exactly as it did before decks).
+ *
+ * `intoArticleCover` is a Page entering the Article cover (#78): whatever its Pattern, it is carried over, re-mapped
+ * from the whole old Grid onto the Pattern area of its Fade direction, and the Page counts as edited.
  */
-function applyGridChange(doc: Document, changed: Document): { document: Document; warnings: Warning[] } {
+function applyGridChange(doc: Document, changed: Document, intoArticleCover = false): { document: Document; warnings: Warning[] } {
   const next = rescaleZone(doc, withDensityDefaults(changed));
   const oldGrid = gridFor(doc);
   const newGrid = gridFor(next);
   const warnings: Warning[] = [];
   next.pages = next.pages.map((p, i) => {
-    if (!isPageEdited(doc, i)) {
+    if (!intoArticleCover && !isPageEdited(doc, i)) {
       const res = regeneratePage(next, i, pageSeed(next, i));
       warnings.push(...res.warnings);
       return { ...res.pages[i]!, edited: false };
     }
-    let pattern = p.pattern.map((b) => remapBlock(b, oldGrid, newGrid));
-    reconnectEdges(p.pattern, pattern, newGrid);
-    // A remap that broke the Pattern rules (a Pattern that followed them before) is repaired
-    // by sliding masses, keeping every Block; if that fails too, computeWarnings warns.
-    if (checkPatternRules(p.pattern, oldGrid).ok && !checkPatternRules(pattern, newGrid).ok) {
-      const repaired = repairPatternRules(pattern, newGrid);
-      if (repaired && checkPatternRules(repaired, newGrid).ok) pattern = repaired;
-    }
+    const direction = fadeDirectionOf(p);
+    const pattern = remapPattern(p.pattern, {
+      from: { col: 0, row: 0, w: oldGrid.cols, h: oldGrid.rows },
+      to: intoArticleCover ? articleCoverPatternArea(next, direction) : { col: 0, row: 0, w: newGrid.cols, h: newGrid.rows },
+      fromGrid: oldGrid,
+      toGrid: newGrid,
+      ...(intoArticleCover ? { resolveOverlaps: true, ...(p.textZone ? { zone: p.textZone } : {}) } : {}),
+    });
     return { ...p, pattern, edited: true };
   });
   return { document: next, warnings };
@@ -136,6 +82,12 @@ function generateNextBlockId(doc: Document, preferredId?: string): string {
 const flatFallback = (pageIndex: number): Warning => ({
   code: 'textZone.flatFallback',
   message: 'No single Block could cover the Text zone, so it was kept clear instead.',
+  pageIndex,
+});
+
+const colourPhotoDropped = (pageIndex: number): Warning => ({
+  code: 'photo.colourDropped',
+  message: 'The colour photo was removed, because only an Article cover takes a colour photo. Add a black-and-white photo for this layout.',
   pageIndex,
 });
 
@@ -182,7 +134,7 @@ function rescaleZone(doc: Document, next: Document): Document {
     ...next,
     pages: next.pages.map((p) => {
       if (p.layout) {
-        const zone = layoutTextZone(next, p.layout);
+        const zone = layoutTextZone(next, p.layout, fadeDirectionOf(p));
         return zone ? { ...p, textZone: zone } : p;
       }
       const zone = p.textZone;
@@ -249,6 +201,20 @@ function blockProblem(doc: Document, block: Pick<Block, 'col' | 'row' | 'w' | 'h
   }
   return null;
 }
+
+const articleCoverLocked = (code: string, what: string): Rejection => ({
+  rejected: {
+    code: `articleCover.${code}`,
+    message: `An Article cover is always Link preview 1.91:1 at the 32x16 Grid on navy, so its ${what} cannot change. Pick another layout first.`,
+  },
+});
+
+const articleCoverOnePage = (): Rejection => ({
+  rejected: {
+    code: 'articleCover.onePage',
+    message: 'An Article cover is a one-Page Document. Remove the other Pages first, or start a new Document.',
+  },
+});
 
 export type ExecuteResult =
   | { document: Document; warnings: Warning[] }
@@ -411,6 +377,7 @@ function executeCommand(
         },
       };
     }
+    if (cmd.transparent && holdsArticleCover(doc)) return articleCoverLocked('backgroundLocked', 'background');
     // Only how the Pages are drawn changes: no Pattern is regenerated.
     const { transparentBackground: _was, ...rest } = doc;
     return { document: cmd.transparent ? { ...rest, transparentBackground: true } : rest, warnings: [] };
@@ -425,6 +392,8 @@ function executeCommand(
         },
       };
     }
+
+    if (holdsArticleCover(doc)) return articleCoverLocked('formatLocked', 'Format');
 
     const knownFormat = FORMATS.find((f) => f.id === cmd.format);
     if (!knownFormat) {
@@ -491,6 +460,8 @@ function executeCommand(
         },
       };
     }
+
+    if (holdsArticleCover(doc)) return articleCoverLocked('densityLocked', 'Density');
 
     const levels = densityLevelsFor(doc.format, doc.customSize);
     const supported = levels.some((lvl) => lvl.level === cmd.density);
@@ -774,7 +745,8 @@ function executeCommand(
     cmd.type === 'setPageLayout' ||
     cmd.type === 'setPageContent' ||
     cmd.type === 'setPhoto' ||
-    cmd.type === 'clearPhoto'
+    cmd.type === 'clearPhoto' ||
+    cmd.type === 'setArticleCover'
   ) {
     if (!doc) {
       return {
@@ -801,18 +773,78 @@ function executeCommand(
         return { rejected: { code: 'layout.unknown', message: `Unknown Page layout: ${String(cmd.layout)}` } };
       }
       const layout: PageLayoutId = cmd.layout;
+      if (layout === 'article-cover') {
+        if (doc.pages.length > 1) return articleCoverOnePage();
+        // An Article cover is Link preview 1.91:1 at the 32x16 Grid. A Page entering it carries its Pattern, re-mapped
+        // onto the area outside the Text zone (#78); the zone comes from the layout table on the new Grid (rescaleZone).
+        // Picking it again keeps its settings and its Pattern as the Grid change leaves them.
+        const { textZone: _zone, ...rest } = page;
+        const { customSize: _size, transparentBackground: _transparent, ...base } = doc;
+        return applyGridChange(doc, {
+          ...base,
+          format: ARTICLE_COVER_FORMAT.format,
+          density: ARTICLE_COVER_FORMAT.density,
+          pages: [{ ...rest, layout }],
+        }, page.layout !== 'article-cover');
+      }
       const zone = layoutTextZone(doc, layout);
-      const { textZone: _zone, layout: _layout, ...rest } = page;
+      const { textZone: _zone, layout: _layout, articleCover: _settings, content: _content, ...rest } = page;
+      // Only an Article cover takes a colour photo: leaving it drops one, and says so. A black-and-white photo stays.
+      const content = contentAllowedOn(layout, page.content);
+      const dropsColour = content !== page.content;
+      const notices: Warning[] = dropsColour ? [colourPhotoDropped(pageIndex)] : [];
       const withLayout = withPage({
         ...rest,
+        ...(content ? { content } : {}),
         ...(layout !== 'pattern' ? { layout } : {}),
         ...(zone ? { textZone: zone } : {}),
       });
-      // An edited Pattern keeps its Blocks (the text-overlap Advisory warns); an unedited one is
-      // regenerated around the new zone with the same seed.
-      if (page.edited) return { document: withLayout, warnings: [] };
+      // Leaving an Article cover: its Pattern lies in the area outside the Text zone, so it is re-mapped back onto the
+      // whole Page (#78). Any other edited Pattern keeps its Blocks (the text-overlap Advisory warns); an unedited one
+      // is regenerated around the new zone with the same seed.
+      if (page.edited) {
+        const grid = gridFor(doc);
+        const pattern =
+          page.layout === 'article-cover'
+            ? remapPattern(page.pattern, {
+                from: articleCoverPatternArea(doc, fadeDirectionOf(page)),
+                to: { col: 0, row: 0, w: grid.cols, h: grid.rows },
+                fromGrid: grid,
+                toGrid: grid,
+                resolveOverlaps: true,
+              })
+            : page.pattern;
+        return { document: withPage({ ...withLayout.pages[pageIndex]!, pattern }), warnings: notices };
+      }
       const res = regeneratePage(withLayout, pageIndex, pageSeed(withLayout, pageIndex));
-      return { document: { ...withLayout, pages: res.pages }, warnings: res.warnings };
+      return { document: { ...withLayout, pages: res.pages }, warnings: [...notices, ...res.warnings] };
+    }
+
+    if (cmd.type === 'setArticleCover') {
+      if (page.layout !== 'article-cover') {
+        return {
+          rejected: { code: 'articleCover.wrongLayout', message: 'Article cover settings apply only to a Page with the Article cover layout.' },
+        };
+      }
+      const problem = articleCoverProblem(cmd.settings);
+      if (problem) return { rejected: problem };
+      const withSettings: Page = { ...page, articleCover: { ...page.articleCover, ...cmd.settings } };
+      // A new Fade direction moves the Text zone (and the photo slot, which the layout derives), and the Pattern goes
+      // with it: re-mapped from the old area onto the new one, never regenerated (#78). It then counts as edited.
+      const from = fadeDirectionOf(page);
+      const to = fadeDirectionOf(withSettings);
+      if (from === to) return { document: withPage(withSettings), warnings: [] };
+      const zone = layoutTextZone(doc, 'article-cover', to);
+      const grid = gridFor(doc);
+      const pattern = remapPattern(page.pattern, {
+        from: articleCoverPatternArea(doc, from),
+        to: articleCoverPatternArea(doc, to),
+        fromGrid: grid,
+        toGrid: grid,
+        resolveOverlaps: true,
+        ...(zone ? { zone } : {}),
+      });
+      return { document: withPage({ ...withSettings, ...(zone ? { textZone: zone } : {}), pattern, edited: true }), warnings: [] };
     }
 
     if (cmd.type === 'setPageContent') {
@@ -824,11 +856,11 @@ function executeCommand(
     if (cmd.type === 'setPhoto') {
       const problem = photoProblem(cmd.photo);
       if (problem) return { rejected: problem };
+      if (cmd.photo.colour && page.layout !== 'article-cover') return { rejected: COLOUR_PHOTO_REFUSED };
       return { document: withPage(withContent(cleanContent({ ...page.content, photo: cmd.photo }))), warnings: [] };
     }
 
-    const { photo: _photo, ...withoutPhoto } = page.content ?? {};
-    return { document: withPage(withContent(cleanContent(withoutPhoto))), warnings: [] };
+    return { document: withPage(withContent(withoutPhoto(page.content))), warnings: [] };
   }
 
   if (cmd.type === 'setTextZone' || cmd.type === 'clearTextZone') {
@@ -894,6 +926,11 @@ function executeCommand(
     const unknownPage = (index: unknown): Rejection => ({
       rejected: { code: 'page.unknown', message: `There is no Page at index ${String(index)} (the Document has ${count}).` },
     });
+
+    // An Article cover is a one-Page Document: no Page is added next to one, and adding one makes a deck.
+    if ((cmd.type === 'addPage' || cmd.type === 'duplicatePage') && (holdsArticleCover(doc) || (cmd.type === 'addPage' && cmd.layout === 'article-cover'))) {
+      return articleCoverOnePage();
+    }
 
     if (cmd.type === 'addPage') {
       if (cmd.layout !== 'pattern' && !Object.hasOwn(LAYOUT_TABLE, cmd.layout)) {

@@ -39,6 +39,8 @@ jobs:
       - run: npm ci --prefer-offline --no-audit --no-fund
       - run: npm run check
       - run: BLOCK_REPO="$HOME/Projects/finnomena/block" npm run vendor:check --if-present
+      # Reruns the whole pick of every exported Plan type's Brick, which takes about two and a half minutes: too slow for the unit tests.
+      - run: npm run bricks:check --if-present
 
   # Files outside tools/: a malformed .claude/settings.json makes Claude Code drop its hooks silently.
   repo-config:

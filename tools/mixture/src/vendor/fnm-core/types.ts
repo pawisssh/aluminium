@@ -89,7 +89,8 @@ export type PageLayoutId =
   | 'product-cover'
   | 'section-divider'
   | 'content'
-  | 'closing';
+  | 'closing'
+  | 'article-cover';
 
 export interface PageTicker {
   show: boolean;
@@ -103,6 +104,8 @@ export interface PageLogo {
 
 /** A photo as the user imported it. `src` is an `image/*` data URL; width and height are in pixels. */
 export interface PagePhoto {
+  /** True for a colour photo, which only an Article cover accepts; absent means black and white. */
+  colour?: true;
   src: string;
   width: number;
   height: number;
@@ -129,12 +132,38 @@ export interface PageContentPatch {
   logo?: Partial<PageLogo>;
 }
 
+/** A brand colour at 100 an Article cover's Highlight can take (spec #67). */
+export type HighlightColour = 'yellow' | 'green' | 'blue' | 'purple' | 'red' | 'orange' | 'white';
+
+/** How an Article cover's photo meets the background: dissolving into it (fade) or cut along Grid cells (step). */
+export type PhotoEdge = 'fade' | 'step';
+
+/**
+ * Where an Article cover's photo meets the background: `left` (a photo on the right dissolving toward the headline),
+ * `bottom` (a photo across the top dissolving downward) or `full` (a full-bleed photo with navy fading in from the left).
+ */
+export type FadeDirection = 'left' | 'bottom' | 'full';
+
+/** Settings only an Article cover has. An absent setting takes its default (see `articleCoverSettings`). */
+export interface ArticleCoverSettings {
+  /** Default yellow. */
+  highlight?: HighlightColour;
+  /** Default fade. */
+  photoEdge?: PhotoEdge;
+  /** How many Grid cells the photo's edge runs over, a whole number from 6 to 14. Default 6 for Bottom, 10 for Left and Full. */
+  fadeLength?: number;
+  /** Default left. */
+  fadeDirection?: FadeDirection;
+}
+
 export interface Page {
   pattern: Block[];
   textZone?: TextZone;
   /** Absent means 'pattern'. */
   layout?: PageLayoutId;
   content?: PageContent;
+  /** Only on an Article cover; dropped when the Page leaves the layout. */
+  articleCover?: ArticleCoverSettings;
   /**
    * The seed this Page's Pattern is generated from, so Pages of a deck differ. A Document with one Page keeps
    * its seed in `Document.seed` and leaves this absent; a Document with several Pages gives every Page its own.
@@ -200,6 +229,8 @@ export type Command =
   | { type: 'setPageLayout'; layout: PageLayoutId; pageIndex?: number }
   | { type: 'setPageContent'; content: PageContentPatch; pageIndex?: number }
   | { type: 'setPhoto'; photo: PagePhoto; pageIndex?: number }
+  /** Changes an Article cover's own settings; refused on any other layout. */
+  | { type: 'setArticleCover'; settings: Partial<ArticleCoverSettings>; pageIndex?: number }
   | { type: 'clearPhoto'; pageIndex?: number }
   | { type: 'setTextZone'; zone: TextZone; pageIndex?: number }
   | { type: 'clearTextZone'; pageIndex?: number }

@@ -36,7 +36,7 @@ export default function App() {
   const [state, setState] = usePlayground()
   const [page, setPage] = usePage()
   const { planTypes, brickGrid, selectedId } = state
-  const portfolios = useMemo(() => state.portfolios.map((p) => ({ ...p, plans: showPlans(p.plans, planTypes) })), [state.portfolios, planTypes])
+  const portfolios = useMemo(() => state.portfolios.map((p) => ({ ...p, plans: showPlans(p.plans, planTypes, brickGrid) })), [state.portfolios, planTypes, brickGrid])
   const selected = portfolios.find((p) => p.id === selectedId) ?? portfolios[0]
 
   const mixes = useMemo(() => new Map<string, Mix>(portfolios.map((p) => [p.id, buildMix(p.plans)])), [portfolios])

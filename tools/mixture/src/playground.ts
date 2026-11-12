@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import { DEFAULT_BRICK_GRID, type BrickGrid } from '@/core/brick'
+import { DEFAULT_BRICK_GRID, type BrickGrid, type BrickSettings } from '@/core/brick'
 import type { PlanColour } from '@/core/colours'
+import { planTypeBrick } from '@/core/pickedBricks'
 import { defaultPlanTypes, drawPlanTypes, type PlanType } from '@/core/planTypes'
 import { generateRandomSeed } from '@/vendor/fnm-core/prng'
 
@@ -13,8 +14,8 @@ export interface Plan {
   change: number
 }
 
-/** A Plan with its Plan type's name, Plan colour and Brick filled in. */
-export type ShownPlan = Plan & Pick<PlanType, 'name' | 'colour' | 'brick'>
+/** A Plan with its Plan type's name, Plan colour and Brick on the Brick grid filled in. */
+export type ShownPlan = Plan & Pick<PlanType, 'name' | 'colour'> & { brick: BrickSettings | undefined }
 
 export interface Portfolio<P extends Plan = Plan> {
   id: string
@@ -29,7 +30,7 @@ export interface Playground {
   selectedId: string
 }
 
-const STORAGE_KEY = 'mixture:v5'
+const STORAGE_KEY = 'mixture:v7'
 
 let nextId = 0
 export const id = () => `${Date.now().toString(36)}-${(nextId++).toString(36)}`
@@ -46,12 +47,12 @@ export function initialPlayground(): Playground {
   return { portfolios, planTypes: defaultPlanTypes(), brickGrid: DEFAULT_BRICK_GRID, selectedId: portfolios[0]!.id }
 }
 
-/** The Plans whose Plan type still exists, each with that type's name, Plan colour and Brick. */
-export function showPlans(plans: Plan[], types: PlanType[]): ShownPlan[] {
+/** The Plans whose Plan type still exists, each with that type's name, Plan colour and Brick on the Brick grid. */
+export function showPlans(plans: Plan[], types: PlanType[], brickGrid: BrickGrid): ShownPlan[] {
   const byId = new Map(types.map((t) => [t.id, t]))
   return plans.flatMap((p) => {
     const type = byId.get(p.typeId)
-    return type ? [{ ...p, name: type.name, colour: type.colour, brick: type.brick }] : []
+    return type ? [{ ...p, name: type.name, colour: type.colour, brick: planTypeBrick(type, brickGrid) }] : []
   })
 }
 

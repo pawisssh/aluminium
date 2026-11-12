@@ -1,0 +1,206 @@
+{
+  "definit-global-select": {
+    "2x2": { "family": "hanging", "slope": "75", "blockCount": 2, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-0", "largestBlock": { "w": 1, "h": 1 }, "exact": false },
+    "4x4": { "family": "rising", "slope": "75", "blockCount": 2, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-0", "largestBlock": { "w": 2, "h": 4 }, "exact": true },
+    "8x8": { "family": "rising", "slope": "75", "blockCount": 2, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-0", "largestBlock": { "w": 2, "h": 8 }, "exact": true },
+    "16x16": { "family": "rising", "slope": "75", "blockCount": 3, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-0", "largestBlock": { "w": 4, "h": 8 }, "exact": true }
+  },
+  "gmi": {
+    "2x2": { "family": "rising", "slope": "half", "blockCount": 2, "guidance": 60, "cornerMeetLimit": 0, "seed": "preset-6", "largestBlock": { "w": 2, "h": 1 }, "exact": true },
+    "4x4": { "family": "rising", "slope": "half", "blockCount": 2, "guidance": 60, "cornerMeetLimit": 0, "seed": "preset-37", "largestBlock": { "w": 2, "h": 2 }, "exact": true },
+    "8x8": { "family": "rising", "slope": "half", "blockCount": 6, "guidance": 60, "cornerMeetLimit": 0, "seed": "preset-3", "largestBlock": { "w": 7, "h": 3 }, "exact": true },
+    "16x16": { "family": "rising", "slope": "half", "blockCount": 5, "guidance": 60, "cornerMeetLimit": 0, "seed": "preset-37", "largestBlock": { "w": 14, "h": 6 }, "exact": true }
+  },
+  "diy": {
+    "2x2": { "family": "rising", "slope": "half", "blockCount": 3, "guidance": 60, "cornerMeetLimit": 0, "seed": "preset-20", "largestBlock": { "w": 1, "h": 1 }, "exact": true },
+    "4x4": { "family": "hanging", "slope": "half", "blockCount": 6, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-59", "largestBlock": { "w": 1, "h": 2 }, "exact": false },
+    "8x8": { "family": "hanging", "slope": "half", "blockCount": 12, "guidance": 60, "cornerMeetLimit": 0, "seed": "preset-13", "largestBlock": { "w": 2, "h": 2 }, "exact": false },
+    "16x16": { "family": "hanging", "slope": "half", "blockCount": 12, "guidance": 60, "cornerMeetLimit": 0, "seed": "preset-56", "largestBlock": { "w": 2, "h": 4 }, "exact": true }
+  },
+  "tailor-made": {
+    "2x2": { "family": "rising", "slope": "half", "blockCount": 2, "guidance": 60, "cornerMeetLimit": 0, "seed": "preset-10", "largestBlock": { "w": 2, "h": 1 }, "exact": true },
+    "4x4": { "family": "hanging", "slope": "half", "blockCount": 4, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-46", "largestBlock": { "w": 2, "h": 2 }, "exact": true },
+    "8x8": { "family": "rising", "slope": "half", "blockCount": 3, "guidance": 60, "cornerMeetLimit": 0, "seed": "preset-13", "largestBlock": { "w": 2, "h": 5 }, "exact": true },
+    "16x16": { "family": "rising", "slope": "half", "blockCount": 5, "guidance": 60, "cornerMeetLimit": 0, "seed": "preset-7", "largestBlock": { "w": 4, "h": 10 }, "exact": true }
+  },
+  "definit-set-select": {
+    "2x2": { "family": "hanging", "slope": "75", "blockCount": 2, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-0", "largestBlock": { "w": 1, "h": 1 }, "exact": false },
+    "4x4": { "family": "rising", "slope": "75", "blockCount": 2, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-36", "largestBlock": { "w": 2, "h": 3 }, "exact": true },
+    "8x8": { "family": "rising", "slope": "75", "blockCount": 2, "guidance": 60, "cornerMeetLimit": 0, "seed": "preset-0", "largestBlock": { "w": 4, "h": 8 }, "exact": true },
+    "16x16": { "family": "rising", "slope": "75", "blockCount": 3, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-2", "largestBlock": { "w": 4, "h": 8 }, "exact": true }
+  },
+  "ggg": {
+    "2x2": { "family": "hanging", "slope": "75", "blockCount": 2, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-0", "largestBlock": { "w": 1, "h": 1 }, "exact": false },
+    "4x4": { "family": "hanging", "slope": "75", "blockCount": 2, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-38", "largestBlock": { "w": 2, "h": 2 }, "exact": true },
+    "8x8": { "family": "hanging", "slope": "75", "blockCount": 4, "guidance": 60, "cornerMeetLimit": 0, "seed": "preset-56", "largestBlock": { "w": 2, "h": 4 }, "exact": true },
+    "16x16": { "family": "hanging", "slope": "75", "blockCount": 3, "guidance": 60, "cornerMeetLimit": 0, "seed": "preset-10", "largestBlock": { "w": 6, "h": 7 }, "exact": true }
+  },
+  "gar": {
+    "2x2": { "family": "mountain", "slope": "half", "blockCount": 1, "guidance": 0, "cornerMeetLimit": 1, "seed": "preset-4", "largestBlock": { "w": 2, "h": 2 }, "exact": false },
+    "4x4": { "family": "mountain", "slope": "half", "blockCount": 3, "guidance": 0, "cornerMeetLimit": 1, "seed": "preset-34", "largestBlock": { "w": 2, "h": 2 }, "exact": true },
+    "8x8": { "family": "mountain", "slope": "half", "blockCount": 2, "guidance": 60, "cornerMeetLimit": 1, "seed": "preset-32", "largestBlock": { "w": 2, "h": 4 }, "exact": true },
+    "16x16": { "family": "mountain", "slope": "half", "blockCount": 5, "guidance": 60, "cornerMeetLimit": 1, "seed": "preset-32", "largestBlock": { "w": 5, "h": 4 }, "exact": true }
+  },
+  "gor": {
+    "2x2": { "family": "hanging", "slope": "75", "blockCount": 2, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-0", "largestBlock": { "w": 1, "h": 1 }, "exact": false },
+    "4x4": { "family": "rising", "slope": "75", "blockCount": 2, "guidance": 60, "cornerMeetLimit": 0, "seed": "preset-7", "largestBlock": { "w": 3, "h": 2 }, "exact": true },
+    "8x8": { "family": "rising", "slope": "75", "blockCount": 2, "guidance": 60, "cornerMeetLimit": 0, "seed": "preset-7", "largestBlock": { "w": 6, "h": 3 }, "exact": true },
+    "16x16": { "family": "rising", "slope": "75", "blockCount": 8, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-20", "largestBlock": { "w": 4, "h": 6 }, "exact": true }
+  },
+  "dynamic-contrarian": {
+    "2x2": { "family": "mountain", "slope": "half", "blockCount": 1, "guidance": 0, "cornerMeetLimit": 1, "seed": "preset-4", "largestBlock": { "w": 2, "h": 2 }, "exact": false },
+    "4x4": { "family": "mountain", "slope": "half", "blockCount": 5, "guidance": 60, "cornerMeetLimit": 1, "seed": "preset-24", "largestBlock": { "w": 2, "h": 2 }, "exact": true },
+    "8x8": { "family": "mountain", "slope": "half", "blockCount": 12, "guidance": 0, "cornerMeetLimit": 1, "seed": "preset-2", "largestBlock": { "w": 2, "h": 3 }, "exact": true },
+    "16x16": { "family": "mountain", "slope": "half", "blockCount": 8, "guidance": 0, "cornerMeetLimit": 1, "seed": "preset-44", "largestBlock": { "w": 4, "h": 8 }, "exact": true }
+  },
+  "first-million": {
+    "2x2": { "family": "rising", "slope": "75", "blockCount": 1, "guidance": 0, "cornerMeetLimit": 2, "seed": "preset-33", "largestBlock": { "w": 1, "h": 1 }, "exact": true },
+    "4x4": { "family": "rising", "slope": "75", "blockCount": 2, "guidance": 60, "cornerMeetLimit": 2, "seed": "preset-36", "largestBlock": { "w": 1, "h": 2 }, "exact": true },
+    "8x8": { "family": "rising", "slope": "75", "blockCount": 6, "guidance": 60, "cornerMeetLimit": 2, "seed": "preset-56", "largestBlock": { "w": 2, "h": 3 }, "exact": false },
+    "16x16": { "family": "rising", "slope": "75", "blockCount": 12, "guidance": 60, "cornerMeetLimit": 2, "seed": "preset-20", "largestBlock": { "w": 2, "h": 6 }, "exact": true }
+  },
+  "goal": {
+    "2x2": { "family": "rising", "slope": "half", "blockCount": 2, "guidance": 60, "cornerMeetLimit": 2, "seed": "preset-3", "largestBlock": { "w": 1, "h": 1 }, "exact": false },
+    "4x4": { "family": "rising", "slope": "half", "blockCount": 5, "guidance": 60, "cornerMeetLimit": 2, "seed": "preset-36", "largestBlock": { "w": 1, "h": 2 }, "exact": true },
+    "8x8": { "family": "rising", "slope": "half", "blockCount": 8, "guidance": 60, "cornerMeetLimit": 2, "seed": "preset-3", "largestBlock": { "w": 1, "h": 4 }, "exact": true },
+    "16x16": { "family": "rising", "slope": "half", "blockCount": 12, "guidance": 60, "cornerMeetLimit": 2, "seed": "preset-3", "largestBlock": { "w": 2, "h": 8 }, "exact": true }
+  },
+  "goals-navigator": {
+    "2x2": { "family": "rising", "slope": "half", "blockCount": 2, "guidance": 60, "cornerMeetLimit": 0, "seed": "preset-6", "largestBlock": { "w": 2, "h": 1 }, "exact": true },
+    "4x4": { "family": "rising", "slope": "half", "blockCount": 3, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-4", "largestBlock": { "w": 2, "h": 3 }, "exact": true },
+    "8x8": { "family": "rising", "slope": "half", "blockCount": 12, "guidance": 60, "cornerMeetLimit": 0, "seed": "preset-18", "largestBlock": { "w": 2, "h": 3 }, "exact": true },
+    "16x16": { "family": "rising", "slope": "half", "blockCount": 3, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-12", "largestBlock": { "w": 8, "h": 6 }, "exact": true }
+  },
+  "all-balance": {
+    "2x2": { "family": "rising", "slope": "half", "blockCount": 1, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-0", "largestBlock": { "w": 1, "h": 2 }, "exact": true },
+    "4x4": { "family": "hanging", "slope": "half", "blockCount": 4, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-22", "largestBlock": { "w": 1, "h": 3 }, "exact": true },
+    "8x8": { "family": "hanging", "slope": "half", "blockCount": 2, "guidance": 60, "cornerMeetLimit": 0, "seed": "preset-6", "largestBlock": { "w": 2, "h": 5 }, "exact": false },
+    "16x16": { "family": "rising", "slope": "half", "blockCount": 12, "guidance": 60, "cornerMeetLimit": 0, "seed": "preset-10", "largestBlock": { "w": 2, "h": 11 }, "exact": false }
+  },
+  "all-star": {
+    "2x2": { "family": "rising", "slope": "75", "blockCount": 1, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-0", "largestBlock": { "w": 1, "h": 2 }, "exact": true },
+    "4x4": { "family": "rising", "slope": "75", "blockCount": 4, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-33", "largestBlock": { "w": 1, "h": 3 }, "exact": true },
+    "8x8": { "family": "hanging", "slope": "75", "blockCount": 2, "guidance": 60, "cornerMeetLimit": 0, "seed": "preset-7", "largestBlock": { "w": 2, "h": 5 }, "exact": false },
+    "16x16": { "family": "rising", "slope": "75", "blockCount": 8, "guidance": 60, "cornerMeetLimit": 0, "seed": "preset-50", "largestBlock": { "w": 2, "h": 11 }, "exact": false }
+  },
+  "all-defense": {
+    "2x2": { "family": "hanging", "slope": "flat", "blockCount": 2, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-0", "largestBlock": { "w": 1, "h": 1 }, "exact": false },
+    "4x4": { "family": "hanging", "slope": "flat", "blockCount": 5, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-16", "largestBlock": { "w": 1, "h": 3 }, "exact": true },
+    "8x8": { "family": "hanging", "slope": "flat", "blockCount": 6, "guidance": 60, "cornerMeetLimit": 0, "seed": "preset-56", "largestBlock": { "w": 1, "h": 5 }, "exact": true },
+    "16x16": { "family": "hanging", "slope": "flat", "blockCount": 8, "guidance": 60, "cornerMeetLimit": 0, "seed": "preset-56", "largestBlock": { "w": 2, "h": 11 }, "exact": false }
+  },
+  "astotz-all-weather": {
+    "2x2": { "family": "rising", "slope": "half", "blockCount": 2, "guidance": 60, "cornerMeetLimit": 0, "seed": "preset-10", "largestBlock": { "w": 2, "h": 1 }, "exact": true },
+    "4x4": { "family": "hanging", "slope": "half", "blockCount": 6, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-50", "largestBlock": { "w": 2, "h": 2 }, "exact": true },
+    "8x8": { "family": "hanging", "slope": "half", "blockCount": 2, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-27", "largestBlock": { "w": 6, "h": 3 }, "exact": true },
+    "16x16": { "family": "rising", "slope": "half", "blockCount": 3, "guidance": 60, "cornerMeetLimit": 0, "seed": "preset-13", "largestBlock": { "w": 11, "h": 6 }, "exact": true }
+  },
+  "astotz-alpha": {
+    "2x2": { "family": "hanging", "slope": "75", "blockCount": 2, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-0", "largestBlock": { "w": 1, "h": 1 }, "exact": false },
+    "4x4": { "family": "hanging", "slope": "75", "blockCount": 5, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-17", "largestBlock": { "w": 2, "h": 2 }, "exact": true },
+    "8x8": { "family": "rising", "slope": "75", "blockCount": 2, "guidance": 60, "cornerMeetLimit": 0, "seed": "preset-13", "largestBlock": { "w": 5, "h": 3 }, "exact": true },
+    "16x16": { "family": "rising", "slope": "75", "blockCount": 3, "guidance": 60, "cornerMeetLimit": 0, "seed": "preset-13", "largestBlock": { "w": 9, "h": 6 }, "exact": true }
+  },
+  "inflation-guard": {
+    "2x2": { "family": "rising", "slope": "flat", "blockCount": 2, "guidance": 60, "cornerMeetLimit": 0, "seed": "preset-48", "largestBlock": { "w": 2, "h": 1 }, "exact": true },
+    "4x4": { "family": "hanging", "slope": "flat", "blockCount": 3, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-26", "largestBlock": { "w": 2, "h": 3 }, "exact": true },
+    "8x8": { "family": "hanging", "slope": "flat", "blockCount": 8, "guidance": 60, "cornerMeetLimit": 0, "seed": "preset-25", "largestBlock": { "w": 2, "h": 4 }, "exact": true },
+    "16x16": { "family": "hanging", "slope": "flat", "blockCount": 5, "guidance": 60, "cornerMeetLimit": 0, "seed": "preset-25", "largestBlock": { "w": 9, "h": 5 }, "exact": true }
+  },
+  "wealthguru": {
+    "2x2": { "family": "hanging", "slope": "75", "blockCount": 2, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-0", "largestBlock": { "w": 1, "h": 1 }, "exact": false },
+    "4x4": { "family": "rising", "slope": "75", "blockCount": 2, "guidance": 60, "cornerMeetLimit": 0, "seed": "preset-3", "largestBlock": { "w": 2, "h": 2 }, "exact": true },
+    "8x8": { "family": "hanging", "slope": "75", "blockCount": 2, "guidance": 60, "cornerMeetLimit": 0, "seed": "preset-10", "largestBlock": { "w": 3, "h": 4 }, "exact": true },
+    "16x16": { "family": "hanging", "slope": "75", "blockCount": 5, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-18", "largestBlock": { "w": 6, "h": 6 }, "exact": true }
+  },
+  "eastspring": {
+    "2x2": { "family": "hanging", "slope": "75", "blockCount": 2, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-0", "largestBlock": { "w": 1, "h": 1 }, "exact": false },
+    "4x4": { "family": "rising", "slope": "75", "blockCount": 2, "guidance": 60, "cornerMeetLimit": 0, "seed": "preset-55", "largestBlock": { "w": 3, "h": 2 }, "exact": true },
+    "8x8": { "family": "rising", "slope": "75", "blockCount": 2, "guidance": 60, "cornerMeetLimit": 0, "seed": "preset-3", "largestBlock": { "w": 4, "h": 3 }, "exact": true },
+    "16x16": { "family": "rising", "slope": "75", "blockCount": 3, "guidance": 60, "cornerMeetLimit": 0, "seed": "preset-20", "largestBlock": { "w": 9, "h": 6 }, "exact": true }
+  },
+  "krungsri": {
+    "2x2": { "family": "rising", "slope": "half", "blockCount": 2, "guidance": 60, "cornerMeetLimit": 0, "seed": "preset-10", "largestBlock": { "w": 2, "h": 1 }, "exact": true },
+    "4x4": { "family": "hanging", "slope": "half", "blockCount": 2, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-3", "largestBlock": { "w": 3, "h": 2 }, "exact": true },
+    "8x8": { "family": "hanging", "slope": "half", "blockCount": 2, "guidance": 60, "cornerMeetLimit": 0, "seed": "preset-3", "largestBlock": { "w": 4, "h": 4 }, "exact": true },
+    "16x16": { "family": "hanging", "slope": "half", "blockCount": 3, "guidance": 60, "cornerMeetLimit": 0, "seed": "preset-3", "largestBlock": { "w": 8, "h": 8 }, "exact": true }
+  },
+  "krungthai": {
+    "2x2": { "family": "hanging", "slope": "75", "blockCount": 2, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-0", "largestBlock": { "w": 1, "h": 1 }, "exact": false },
+    "4x4": { "family": "rising", "slope": "75", "blockCount": 3, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-6", "largestBlock": { "w": 2, "h": 2 }, "exact": true },
+    "8x8": { "family": "hanging", "slope": "75", "blockCount": 3, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-6", "largestBlock": { "w": 4, "h": 4 }, "exact": true },
+    "16x16": { "family": "hanging", "slope": "75", "blockCount": 8, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-43", "largestBlock": { "w": 4, "h": 4 }, "exact": true }
+  },
+  "tisco": {
+    "2x2": { "family": "rising", "slope": "half", "blockCount": 2, "guidance": 60, "cornerMeetLimit": 0, "seed": "preset-10", "largestBlock": { "w": 2, "h": 1 }, "exact": true },
+    "4x4": { "family": "hanging", "slope": "half", "blockCount": 2, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-43", "largestBlock": { "w": 2, "h": 2 }, "exact": true },
+    "8x8": { "family": "hanging", "slope": "half", "blockCount": 2, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-29", "largestBlock": { "w": 6, "h": 4 }, "exact": true },
+    "16x16": { "family": "hanging", "slope": "half", "blockCount": 3, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-38", "largestBlock": { "w": 6, "h": 8 }, "exact": true }
+  },
+  "scb": {
+    "2x2": { "family": "hanging", "slope": "75", "blockCount": 2, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-0", "largestBlock": { "w": 1, "h": 1 }, "exact": false },
+    "4x4": { "family": "rising", "slope": "75", "blockCount": 5, "guidance": 60, "cornerMeetLimit": 0, "seed": "preset-9", "largestBlock": { "w": 2, "h": 2 }, "exact": true },
+    "8x8": { "family": "rising", "slope": "75", "blockCount": 3, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-54", "largestBlock": { "w": 4, "h": 4 }, "exact": true },
+    "16x16": { "family": "rising", "slope": "75", "blockCount": 5, "guidance": 60, "cornerMeetLimit": 0, "seed": "preset-48", "largestBlock": { "w": 4, "h": 7 }, "exact": true }
+  },
+  "uobam": {
+    "2x2": { "family": "hanging", "slope": "75", "blockCount": 2, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-0", "largestBlock": { "w": 1, "h": 1 }, "exact": false },
+    "4x4": { "family": "rising", "slope": "75", "blockCount": 5, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-26", "largestBlock": { "w": 2, "h": 3 }, "exact": true },
+    "8x8": { "family": "rising", "slope": "75", "blockCount": 3, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-3", "largestBlock": { "w": 4, "h": 4 }, "exact": true },
+    "16x16": { "family": "rising", "slope": "75", "blockCount": 3, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-37", "largestBlock": { "w": 8, "h": 8 }, "exact": true }
+  },
+  "bcap": {
+    "2x2": { "family": "hanging", "slope": "75", "blockCount": 2, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-0", "largestBlock": { "w": 1, "h": 1 }, "exact": false },
+    "4x4": { "family": "rising", "slope": "75", "blockCount": 3, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-13", "largestBlock": { "w": 2, "h": 3 }, "exact": true },
+    "8x8": { "family": "hanging", "slope": "75", "blockCount": 3, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-28", "largestBlock": { "w": 4, "h": 4 }, "exact": true },
+    "16x16": { "family": "rising", "slope": "75", "blockCount": 3, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-33", "largestBlock": { "w": 8, "h": 8 }, "exact": true }
+  },
+  "kasset": {
+    "2x2": { "family": "hanging", "slope": "75", "blockCount": 2, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-0", "largestBlock": { "w": 1, "h": 1 }, "exact": false },
+    "4x4": { "family": "hanging", "slope": "75", "blockCount": 2, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-1", "largestBlock": { "w": 2, "h": 2 }, "exact": true },
+    "8x8": { "family": "hanging", "slope": "75", "blockCount": 6, "guidance": 60, "cornerMeetLimit": 0, "seed": "preset-3", "largestBlock": { "w": 2, "h": 3 }, "exact": true },
+    "16x16": { "family": "hanging", "slope": "75", "blockCount": 3, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-38", "largestBlock": { "w": 6, "h": 8 }, "exact": true }
+  },
+  "tax-saving": {
+    "2x2": { "family": "rising", "slope": "half", "blockCount": 2, "guidance": 60, "cornerMeetLimit": 0, "seed": "preset-50", "largestBlock": { "w": 1, "h": 1 }, "exact": true },
+    "4x4": { "family": "hanging", "slope": "half", "blockCount": 4, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-2", "largestBlock": { "w": 1, "h": 2 }, "exact": false },
+    "8x8": { "family": "hanging", "slope": "half", "blockCount": 12, "guidance": 60, "cornerMeetLimit": 0, "seed": "preset-9", "largestBlock": { "w": 2, "h": 2 }, "exact": false },
+    "16x16": { "family": "hanging", "slope": "half", "blockCount": 12, "guidance": 60, "cornerMeetLimit": 0, "seed": "preset-56", "largestBlock": { "w": 2, "h": 4 }, "exact": true }
+  },
+  "rmf": {
+    "2x2": { "family": "rising", "slope": "half", "blockCount": 2, "guidance": 60, "cornerMeetLimit": 0, "seed": "preset-50", "largestBlock": { "w": 1, "h": 1 }, "exact": true },
+    "4x4": { "family": "rising", "slope": "half", "blockCount": 3, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-42", "largestBlock": { "w": 2, "h": 1 }, "exact": false },
+    "8x8": { "family": "rising", "slope": "half", "blockCount": 6, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-4", "largestBlock": { "w": 2, "h": 2 }, "exact": false },
+    "16x16": { "family": "hanging", "slope": "half", "blockCount": 12, "guidance": 60, "cornerMeetLimit": 0, "seed": "preset-56", "largestBlock": { "w": 2, "h": 4 }, "exact": true }
+  },
+  "thai-esg": {
+    "2x2": { "family": "rising", "slope": "half", "blockCount": 2, "guidance": 60, "cornerMeetLimit": 0, "seed": "preset-50", "largestBlock": { "w": 1, "h": 1 }, "exact": true },
+    "4x4": { "family": "rising", "slope": "half", "blockCount": 4, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-6", "largestBlock": { "w": 1, "h": 2 }, "exact": false },
+    "8x8": { "family": "rising", "slope": "half", "blockCount": 6, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-7", "largestBlock": { "w": 2, "h": 2 }, "exact": false },
+    "16x16": { "family": "hanging", "slope": "half", "blockCount": 12, "guidance": 60, "cornerMeetLimit": 0, "seed": "preset-56", "largestBlock": { "w": 2, "h": 4 }, "exact": true }
+  },
+  "e-savings": {
+    "2x2": { "family": "rising", "slope": "flat", "blockCount": 1, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-0", "largestBlock": { "w": 1, "h": 1 }, "exact": true },
+    "4x4": { "family": "rising", "slope": "flat", "blockCount": 4, "guidance": 60, "cornerMeetLimit": 0, "seed": "preset-25", "largestBlock": { "w": 1, "h": 1 }, "exact": true },
+    "8x8": { "family": "rising", "slope": "flat", "blockCount": 6, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-35", "largestBlock": { "w": 2, "h": 2 }, "exact": false },
+    "16x16": { "family": "rising", "slope": "flat", "blockCount": 16, "guidance": 60, "cornerMeetLimit": 0, "seed": "preset-39", "largestBlock": { "w": 2, "h": 4 }, "exact": true }
+  },
+  "money-market": {
+    "2x2": { "family": "rising", "slope": "flat", "blockCount": 1, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-0", "largestBlock": { "w": 1, "h": 1 }, "exact": true },
+    "4x4": { "family": "rising", "slope": "flat", "blockCount": 4, "guidance": 60, "cornerMeetLimit": 0, "seed": "preset-25", "largestBlock": { "w": 1, "h": 1 }, "exact": true },
+    "8x8": { "family": "rising", "slope": "flat", "blockCount": 6, "guidance": 60, "cornerMeetLimit": 0, "seed": "preset-9", "largestBlock": { "w": 2, "h": 2 }, "exact": false },
+    "16x16": { "family": "hanging", "slope": "flat", "blockCount": 16, "guidance": 60, "cornerMeetLimit": 0, "seed": "preset-32", "largestBlock": { "w": 2, "h": 4 }, "exact": true }
+  },
+  "money-plus": {
+    "2x2": { "family": "hanging", "slope": "flat", "blockCount": 2, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-0", "largestBlock": { "w": 1, "h": 1 }, "exact": true },
+    "4x4": { "family": "hanging", "slope": "flat", "blockCount": 5, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-32", "largestBlock": { "w": 1, "h": 2 }, "exact": true },
+    "8x8": { "family": "hanging", "slope": "flat", "blockCount": 4, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-26", "largestBlock": { "w": 2, "h": 3 }, "exact": false },
+    "16x16": { "family": "hanging", "slope": "flat", "blockCount": 12, "guidance": 60, "cornerMeetLimit": 0, "seed": "preset-24", "largestBlock": { "w": 2, "h": 6 }, "exact": true }
+  },
+  "kkp-finsave": {
+    "2x2": { "family": "rising", "slope": "flat", "blockCount": 1, "guidance": 0, "cornerMeetLimit": 0, "seed": "preset-0", "largestBlock": { "w": 1, "h": 1 }, "exact": true },
+    "4x4": { "family": "rising", "slope": "flat", "blockCount": 4, "guidance": 60, "cornerMeetLimit": 0, "seed": "preset-25", "largestBlock": { "w": 1, "h": 1 }, "exact": true },
+    "8x8": { "family": "rising", "slope": "flat", "blockCount": 6, "guidance": 60, "cornerMeetLimit": 0, "seed": "preset-12", "largestBlock": { "w": 2, "h": 2 }, "exact": false },
+    "16x16": { "family": "rising", "slope": "flat", "blockCount": 16, "guidance": 60, "cornerMeetLimit": 0, "seed": "preset-39", "largestBlock": { "w": 2, "h": 4 }, "exact": true }
+  }
+}

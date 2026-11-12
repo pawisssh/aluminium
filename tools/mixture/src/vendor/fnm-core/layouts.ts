@@ -1,7 +1,9 @@
+import { DEFAULT_FADE_DIRECTION, FADE_LENGTH_RANGE } from './articleCover.js';
 import { getFormatDimensions } from './formats.js';
 import { gridFor } from './grid.js';
+import { overlaps } from './patternRules.js';
 import { CLEAR_ZONE_RING_DEPTH } from './textZone.js';
-import type { Document, Grid, PageLayoutId, TextZone, TextZoneMode } from './types.js';
+import type { Document, FadeDirection, Grid, Page, PageLayoutId, TextZone, TextZoneMode } from './types.js';
 
 /**
  * Page layouts as data (GLOSSARY: Page layout; the Figma guideline 6.3 "four ways to lay out", 6.6 Ticker and
@@ -65,6 +67,11 @@ export interface LayoutSlots {
   slots: Partial<Record<Exclude<SlotName, 'logo'>, LayoutSlot>> & { logo?: LogoSlot };
   /** The layout's Text zone in cells, inside the Grid and at least 1x1. Absent for 'pattern'. */
   textZone?: TextZone;
+  /**
+   * True when the photo slot is a backdrop: it keeps its whole rectangle under the text and the logo instead of being
+   * cut around them (an Article cover's photo, whose fade or Step edge keeps the text off it).
+   */
+  photoBackdrop?: true;
 }
 
 type FlatSlotName = Exclude<SlotName, 'logo'>;
@@ -73,6 +80,8 @@ interface OrientationSpec {
   zone: { rect: FracRect; mode: TextZoneMode };
   slots: Partial<Record<FlatSlotName, FracRect>>;
   logo: LogoAnchor;
+  /** The photo slot is a backdrop (see `LayoutSlots.photoBackdrop`). */
+  photoBackdrop?: true;
 }
 
 type LayoutSpec = Record<Orientation, OrientationSpec>;
@@ -153,6 +162,57 @@ const CLOSING_UPRIGHT: OrientationSpec = {
     ticker: r(0, 0.43, 1, 0.07),
   },
   logo: 'bottom-left',
+};
+
+/**
+ * Article cover (GLOSSARY; spec #67, prototype verdict on #67): a finnomena.com cover on Link preview 1.91:1 at the
+ * 32x16 Grid. The layout depends on the Fade direction (`ARTICLE_COVER_DIRECTIONS`); this is Left, the default and the
+ * entry the layout table lists. The Clear Text zone is cols [1,16) and rows [3,15); the headline sits at the bottom of
+ * its slot, right above the secondary copy, so the two read as one block in the middle of the zone. The wordmark stands
+ * in top-left until the Finnomena.Funds logo lands (#74). The layout is landscape only (the Format is locked); the
+ * other orientations repeat it so the table stays total.
+ */
+const ARTICLE_COVER: OrientationSpec = {
+  zone: { rect: r(1 / 32, 3 / 16, 15 / 32, 12 / 16), mode: 'clear' },
+  slots: {
+    headline: r(1 / 32, 4 / 16, 15 / 32, 6 / 16),
+    secondary: r(1 / 32, 10 / 16, 15 / 32, 3 / 16),
+    // The photo fills the right half, every row (cols [16,32)). It starts where the Text zone ends, so text never meets it.
+    photo: r(16 / 32, 0, 16 / 32, 1),
+  },
+  logo: 'top-left',
+  photoBackdrop: true,
+};
+
+/** Full: the photo covers the Page. The Text zone is Left's: the photo is solid navy up to col 16, where the fade starts. */
+const ARTICLE_COVER_FULL: OrientationSpec = {
+  ...ARTICLE_COVER,
+  slots: { ...ARTICLE_COVER.slots, photo: r(0, 0, 1, 1) },
+};
+
+/**
+ * Bottom: the photo spans the top, rows [0,9) at full width; the Text zone is cols [1,31) and rows [9,15) below it.
+ * The slots keep inside the zone's ring like Left's (4 rows of text): the headline above a one-row secondary line.
+ * Named LOW: the Neon bundle (block-pattern.mjs) keeps identifiers, and its test refuses a font signature that an all-caps name for this side would contain.
+ */
+const ARTICLE_COVER_LOW: OrientationSpec = {
+  zone: { rect: r(1 / 32, 9 / 16, 30 / 32, 6 / 16), mode: 'clear' },
+  slots: {
+    headline: r(1 / 32, 10 / 16, 30 / 32, 3 / 16),
+    secondary: r(1 / 32, 13 / 16, 30 / 32, 1 / 16),
+    photo: r(0, 0, 1, 9 / 16),
+  },
+  logo: 'top-left',
+  photoBackdrop: true,
+};
+
+/** The layout of each Fade direction: the one place its Text zone, photo slot and edge come from. */
+const ARTICLE_COVER_DIRECTIONS: Record<FadeDirection, { spec: OrientationSpec; edge: { axis: 'x' | 'y'; start: number } }> = {
+  // The line where the photo is fully the background, as a fraction of the Page along the fade's axis: Left and Full
+  // fade rightward from col 16, Bottom fades upward from the photo's bottom edge, row 9.
+  left: { spec: ARTICLE_COVER, edge: { axis: 'x', start: 16 / 32 } },
+  full: { spec: ARTICLE_COVER_FULL, edge: { axis: 'x', start: 16 / 32 } },
+  bottom: { spec: ARTICLE_COVER_LOW, edge: { axis: 'y', start: 9 / 16 } },
 };
 
 /** The layout table. Add a layout by adding an entry here (and its id to PageLayoutId). */
@@ -243,6 +303,7 @@ export const LAYOUT_TABLE: Record<Exclude<PageLayoutId, 'pattern'>, LayoutSpec> 
       logo: 'bottom-left',
     },
   },
+  'article-cover': { portrait: ARTICLE_COVER, square: ARTICLE_COVER, landscape: ARTICLE_COVER },
 };
 
 /** A Page is square when its pixel aspect is within 10% of 1:1. */
@@ -267,9 +328,6 @@ function snapRect(f: FracRect, grid: Grid, within?: CellRect): CellRect {
   const [c, d] = snapSpan(f.y, f.y + f.h, grid.rows, r0, within ? r0 + within.h : grid.rows);
   return { col: a, row: c, w: b - a, h: d - c };
 }
-
-const overlaps = (a: CellRect, b: CellRect): boolean =>
-  a.col < b.col + b.w && b.col < a.col + a.w && a.row < b.row + b.h && b.row < a.row + a.h;
 
 /** The largest piece of `a` left after removing `fixed`, or null when nothing of at least 1x1 is left. */
 function cutAround(a: CellRect, fixed: CellRect): CellRect | null {
@@ -318,15 +376,16 @@ const EPS = 1e-9;
 /**
  * Slots and Text zone of `layout` on the Grid of `doc` (a Document's Format and Density, not a particular Page).
  * Everything is in whole cells inside the Grid. The Text zone is at least 1x1; every text slot lies inside it
- * where the table puts it there; no two slots overlap.
+ * where the table puts it there; no two slots overlap, except an Article cover's photo, a backdrop under the rest.
+ * `fadeDirection` picks an Article cover's layout and is ignored for any other.
  */
-export function layoutSlotsFor(doc: Document, layout: PageLayoutId): LayoutSlots {
+export function layoutSlotsFor(doc: Document, layout: PageLayoutId, fadeDirection: FadeDirection = DEFAULT_FADE_DIRECTION): LayoutSlots {
   const { widthPx, heightPx } = getFormatDimensions(doc);
   const orientation = orientationFor(widthPx, heightPx);
   if (layout === 'pattern') return { layout, orientation, slots: {} };
 
   const grid = gridFor(doc);
-  const spec = LAYOUT_TABLE[layout][orientation];
+  const spec = layout === 'article-cover' ? ARTICLE_COVER_DIRECTIONS[fadeDirection].spec : LAYOUT_TABLE[layout][orientation];
   const zoneCells = snapRect(spec.zone.rect, grid);
   const textZone: TextZone = { ...zoneCells, mode: spec.zone.mode };
 
@@ -350,14 +409,22 @@ export function layoutSlotsFor(doc: Document, layout: PageLayoutId): LayoutSlots
   const box = logoBox(widthPx, heightPx, spec.logo);
   candidates.set('logo', cellsCovering(box, grid));
 
+  // Slots in priority order: a later one is cut around the earlier ones that overlap it. A backdrop photo keeps its
+  // whole rectangle and cuts no later slot either (`collide` leaves it out): the others sit on top of it.
   const placed: [SlotName, CellRect][] = [];
+  const collide: CellRect[] = [];
   for (const name of PRIORITY) {
     let cells: CellRect | null = candidates.get(name) ?? null;
     if (!cells) continue;
-    for (const [, other] of placed) {
-      if (cells && overlaps(cells, other)) cells = cutAround(cells, other);
+    const backdrop = name === 'photo' && spec.photoBackdrop === true;
+    if (!backdrop) {
+      for (const other of collide) {
+        if (cells && overlaps(cells, other)) cells = cutAround(cells, other);
+      }
     }
-    if (cells) placed.push([name, cells]);
+    if (!cells) continue;
+    placed.push([name, cells]);
+    if (!backdrop) collide.push(cells);
   }
 
   const slots: LayoutSlots['slots'] = {};
@@ -365,15 +432,74 @@ export function layoutSlotsFor(doc: Document, layout: PageLayoutId): LayoutSlots
     if (name === 'logo') slots.logo = { cells, px: toPx(cells, grid), anchor: spec.logo, box };
     else slots[name] = { cells, px: toPx(cells, grid) };
   }
-  return { layout, orientation, slots, textZone };
+  return { layout, orientation, slots, textZone, ...(spec.photoBackdrop && slots.photo ? { photoBackdrop: true as const } : {}) };
 }
 
-/** The Text zone `layout` gives on the Grid of `doc`; undefined for 'pattern'. */
-export function layoutTextZone(doc: Document, layout: PageLayoutId): TextZone | undefined {
-  return layoutSlotsFor(doc, layout).textZone;
+/** The Text zone `layout` gives on the Grid of `doc` (for an Article cover, in `fadeDirection`); undefined for 'pattern'. */
+export function layoutTextZone(doc: Document, layout: PageLayoutId, fadeDirection: FadeDirection = DEFAULT_FADE_DIRECTION): TextZone | undefined {
+  return layoutSlotsFor(doc, layout, fadeDirection).textZone;
 }
+
+/** The Fade direction of a Page: Left until an Article cover sets one. Any other layout has no direction, so Left. */
+export const fadeDirectionOf = (page: Page | undefined): FadeDirection =>
+  page?.layout === 'article-cover' ? (page.articleCover?.fadeDirection ?? DEFAULT_FADE_DIRECTION) : DEFAULT_FADE_DIRECTION;
 
 /** Slots and Text zone of a Page's layout, snapped to the Grid in cells and pixels. */
 export function layoutSlots(doc: Document, pageIndex = 0): LayoutSlots {
-  return layoutSlotsFor(doc, doc.pages[pageIndex]?.layout ?? 'pattern');
+  const page = doc.pages[pageIndex];
+  return layoutSlotsFor(doc, page?.layout ?? 'pattern', fadeDirectionOf(page));
+}
+
+/**
+ * Where an Article cover's photo meets the background in `fadeDirection`, in whole cells: the `axis` the edge runs
+ * along ('x' rightward, 'y' upward), `start`, the cell line where the photo is fully the background, and `room`, how
+ * many cells the photo has beyond that line (what a fade or a Step edge can run over).
+ */
+export interface ArticleCoverEdge {
+  axis: 'x' | 'y';
+  start: number;
+  room: number;
+}
+
+/**
+ * The cells of an Article cover that lie outside its Text zone in `fadeDirection`: where the Page's Pattern is
+ * kept (#78). It runs from the zone's far side to the Page edge, and reaches one ring cell into the zone so that a
+ * re-mapped Pattern may touch the zone the way the Clear zone rule allows: Left and Full are cols [15,32) on every row,
+ * Bottom is rows [0,10) on every column (on the 32x16 Grid). Derived from the layout table, so it follows the zone.
+ */
+export function articleCoverPatternArea(doc: Document, fadeDirection: FadeDirection): CellRect {
+  const grid = gridFor(doc);
+  const zone = layoutSlotsFor(doc, 'article-cover', fadeDirection).textZone!;
+  if (ARTICLE_COVER_DIRECTIONS[fadeDirection].edge.axis === 'x') {
+    const col = zone.col + zone.w - CLEAR_ZONE_RING_DEPTH;
+    return { col, row: 0, w: grid.cols - col, h: grid.rows };
+  }
+  return { col: 0, row: 0, w: grid.cols, h: zone.row + CLEAR_ZONE_RING_DEPTH };
+}
+
+/**
+ * The edge of an Article cover's photo in `fadeDirection` on the Grid of `doc`: the axis it runs along, the cell line
+ * where the photo is fully the background (`start`) and the cells the photo has beyond that line (`room`). `start` is
+ * the layout table's fraction rounded to whole cells and kept inside the photo slot. Left and Full run along x from
+ * col 16; Bottom runs along y from row 9, upward. The Fade ramp, the Step cuts and the logo's clear space all read it.
+ */
+export function articleCoverEdge(doc: Document, fadeDirection: FadeDirection): ArticleCoverEdge {
+  const { axis, start: frac } = ARTICLE_COVER_DIRECTIONS[fadeDirection].edge;
+  const grid = gridFor(doc);
+  const photo = layoutSlotsFor(doc, 'article-cover', fadeDirection).slots.photo!.cells;
+  if (axis === 'x') {
+    const start = clamp(Math.round(frac * grid.cols), photo.col, photo.col + photo.w);
+    return { axis, start, room: photo.col + photo.w - start };
+  }
+  const start = clamp(Math.round(frac * grid.rows), photo.row, photo.row + photo.h);
+  return { axis, start, room: start - photo.row };
+}
+
+/**
+ * The longest fade length, in cells, the Fade direction can show on this Document's Grid: the range maximum, or less
+ * where the photo has fewer cells beyond its edge line (Bottom's photo is 9 rows tall). A longer saved length still
+ * works, shortened to this; a control offers no more than this.
+ */
+export function fadeLengthMax(doc: Document, fadeDirection: FadeDirection): number {
+  return Math.min(FADE_LENGTH_RANGE.max, articleCoverEdge(doc, fadeDirection).room);
 }

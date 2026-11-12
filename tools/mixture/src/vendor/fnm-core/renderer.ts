@@ -1,7 +1,8 @@
+import { pageFills, tintFill } from './articleCover.js';
 import { renderComposed } from './composedRenderer.js';
-import { DEFAULT_COLOURWAY_ID, getColourway } from './constants.js';
 import { getFormatDimensions } from './formats.js';
 import { gridFor } from './grid.js';
+import type { PhotoBaker } from './photoBake.js';
 import type { Shaper } from './text/index.js';
 import type { Document } from './types.js';
 
@@ -12,13 +13,19 @@ export interface RenderOptions {
    * 'pattern' Page, the output is the Pattern alone.
    */
   shaper?: Shaper;
+  /**
+   * Supplies the baked photo of a Photo fade (an Article cover's default Photo edge). Without it, or before the
+   * photo is baked, a Page with a fade is refused with a `PhotoBakeError` rather than drawn with the unbaked photo.
+   */
+  photoBaker?: PhotoBaker;
 }
 
 /**
  * Renders a Document's Page into an SVG string.
  * Pattern structure:
  * - <svg xmlns shape-rendering="crispEdges" viewBox="0 0 W H" width height>
- * - One background <rect> with fill of Colourway background (none when the Document's background is transparent)
+ * - One background <rect> with fill of Colourway background (none when the Document's background is transparent;
+ *   navy 100 on an Article cover, see `pageFills`)
  * - One <rect> per Block in list order with solid fill="#HEX"
  * No opacity attributes anywhere.
  *
@@ -28,15 +35,15 @@ export interface RenderOptions {
 export function renderSvg(doc: Document, pageIndex = 0, options: RenderOptions = {}): string {
   const page = doc.pages[pageIndex] ?? { pattern: [] };
   if (options.shaper && page.layout && page.layout !== 'pattern') {
-    return renderComposed(doc, pageIndex, options.shaper);
+    return renderComposed(doc, pageIndex, options.shaper, options.photoBaker);
   }
   const grid = gridFor(doc);
-  const colourway = getColourway(doc.colourway) ?? getColourway(DEFAULT_COLOURWAY_ID)!;
+  const fills = pageFills(doc, pageIndex);
   const { widthPx: width, heightPx: height } = getFormatDimensions(doc);
 
   const rects: string[] = [];
   // Background rect
-  if (!doc.transparentBackground) rects.push(`<rect width="${width}" height="${height}" fill="${colourway.background}"/>`);
+  if (!doc.transparentBackground) rects.push(`<rect width="${width}" height="${height}" fill="${fills.background}"/>`);
 
   // Block rects in pattern order
   for (const block of page.pattern) {
@@ -44,13 +51,7 @@ export function renderSvg(doc: Document, pageIndex = 0, options: RenderOptions =
     const y = block.row * grid.cellH;
     const w = block.w * grid.cellW;
     const h = block.h * grid.cellH;
-    const tintCount = colourway.tints.length;
-    const tintIndex =
-      tintCount > 0 ? ((block.tint % tintCount) + tintCount) % tintCount : 0;
-    const fill =
-      colourway.tints[tintIndex] ??
-      colourway.tints[0] ??
-      colourway.background;
+    const fill = tintFill(fills, block.tint);
 
     rects.push(`<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${fill}"/>`);
   }

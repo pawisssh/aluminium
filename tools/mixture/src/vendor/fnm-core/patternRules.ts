@@ -1,3 +1,4 @@
+import type { CellRect } from './layouts.js';
 import type { Block, Grid } from './types.js';
 
 /**
@@ -77,7 +78,8 @@ export function checkPatternRules(blocks: readonly Block[], grid: Grid): Pattern
   return { ok: violations.length === 0, violations };
 }
 
-const overlaps = (a: Block, b: Block): boolean =>
+/** True when two rectangles of cells (Blocks, slots) share at least one cell. */
+export const overlaps = (a: CellRect, b: CellRect): boolean =>
   a.col < b.col + b.w && b.col < a.col + a.w && a.row < b.row + b.h && b.row < a.row + a.h;
 
 /**
@@ -85,15 +87,19 @@ const overlaps = (a: Block, b: Block): boolean =>
  * shortest way until it touches the main mass, then slides the whole mass to the nearest Page
  * edge if it floats. Returns the new Blocks, or null when nothing could be done.
  * Moves are whole masses, so shapes inside a mass are untouched.
+ * `bounds` keeps every move inside a part of the Page (an Article cover's Pattern area, #78): masses are slid only
+ * inside it, and a floating mass goes only to a Page edge that the bounds reach. It defaults to the whole Page.
  */
 export function repairPatternRules(
   blocks: readonly Block[],
   grid: Grid,
   /** Indexes of Blocks that must not move (e.g. the Block covering a flat Text zone): their mass is the anchor. */
-  fixed: ReadonlySet<number> = new Set()
+  fixed: ReadonlySet<number> = new Set(),
+  bounds: CellRect = { col: 0, row: 0, w: grid.cols, h: grid.rows }
 ): Block[] | null {
   let out = blocks.map((b) => ({ ...b }));
-  const inGrid = (b: Block) => b.col >= 0 && b.row >= 0 && b.col + b.w <= grid.cols && b.row + b.h <= grid.rows;
+  const inGrid = (b: Block) =>
+    b.col >= bounds.col && b.row >= bounds.row && b.col + b.w <= bounds.col + bounds.w && b.row + b.h <= bounds.row + bounds.h;
 
   for (let guard = 0; guard < blocks.length; guard++) {
     const masses = patternMasses(out);
@@ -130,13 +136,16 @@ export function repairPatternRules(
 
   if (!touchesPageEdge(out, grid)) {
     if (fixed.size > 0) return null;
-    const left = Math.min(...out.map((b) => b.col));
-    const top = Math.min(...out.map((b) => b.row));
-    const right = grid.cols - Math.max(...out.map((b) => b.col + b.w));
-    const bottom = grid.rows - Math.max(...out.map((b) => b.row + b.h));
-    const m = Math.min(left, top, right, bottom);
-    const [dc, dr] = m === left ? [-m, 0] : m === bottom ? [0, m] : m === right ? [m, 0] : [0, -m];
-    out = out.map((b) => ({ ...b, col: b.col + dc, row: b.row + dr }));
+    // The Page edges the bounds reach, and how far the mass is from each (left, bottom, right, top: ties go in that order).
+    const gaps = [
+      { dc: -Math.min(...out.map((b) => b.col)), dr: 0, reach: bounds.col === 0 },
+      { dc: 0, dr: grid.rows - Math.max(...out.map((b) => b.row + b.h)), reach: bounds.row + bounds.h === grid.rows },
+      { dc: grid.cols - Math.max(...out.map((b) => b.col + b.w)), dr: 0, reach: bounds.col + bounds.w === grid.cols },
+      { dc: 0, dr: -Math.min(...out.map((b) => b.row)), reach: bounds.row === 0 },
+    ].filter((g) => g.reach);
+    if (gaps.length === 0) return null;
+    const nearest = gaps.reduce((best, g) => (Math.abs(g.dc + g.dr) < Math.abs(best.dc + best.dr) ? g : best));
+    out = out.map((b) => ({ ...b, col: b.col + nearest.dc, row: b.row + nearest.dr }));
   }
   return out;
 }

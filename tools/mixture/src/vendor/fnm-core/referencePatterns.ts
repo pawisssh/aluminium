@@ -159,8 +159,14 @@ export const REFERENCE_PATTERNS: readonly ReferencePattern[] = REFERENCE_PATTERN
   }
 );
 
+/**
+ * From this set template mode lays a Reference on the Grid by area coverage instead of centre sampling
+ * (templateMask). It adds no Reference: set 3 is set 2's list, so the next promotion is set 4.
+ */
+export const AREA_RESAMPLE_SET = 3;
+
 /** The newest Reference set: new Documents and Generate use it. */
-export const LATEST_REFERENCE_SET = Math.max(...REFERENCE_PATTERNS.map((p) => p.set));
+export const LATEST_REFERENCE_SET = Math.max(AREA_RESAMPLE_SET, ...REFERENCE_PATTERNS.map((p) => p.set));
 
 /**
  * The Reference Patterns of set `set` (every reference added up to it), in a fixed order. A Document without
