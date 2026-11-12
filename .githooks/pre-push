@@ -1,10 +1,13 @@
 #!/bin/sh
 # Stops a push to a branch whose pull request has already merged, with no open one: the commits
-# would reach no PR. Skipped when gh is missing or cannot reach GitHub.
+# would reach no PR. Then warns when no runner is online to check the push. Both are skipped when gh
+# is missing or cannot reach GitHub.
 command -v gh >/dev/null || exit 0
+pushed_branch=
 while read -r local_ref _ remote_ref _; do
   [ "$local_ref" = "(delete)" ] && continue
   case $remote_ref in refs/heads/*) ;; *) continue ;; esac
+  pushed_branch=1
   branch=${remote_ref#refs/heads/}
   states=$(gh pr list --head "$branch" --state all --json state -q '.[].state' 2>/dev/null) || continue
   case $states in
@@ -16,4 +19,14 @@ while read -r local_ref _ remote_ref _; do
       ;;
   esac
 done
+
+# Every job runs on a self-hosted runner with the aluminium label, and a run waits in the queue,
+# saying nothing, while none is online. Reading the list needs admin access to the repo.
+[ -n "$pushed_branch" ] || exit 0
+online=$(gh api 'repos/{owner}/{repo}/actions/runners' \
+  --jq '[.runners[] | select(.status == "online" and any(.labels[]; .name == "aluminium"))] | length' 2>/dev/null) || exit 0
+if [ "$online" = 0 ]; then
+  echo "pre-push: no runner with the aluminium label is online, so this push's checks will sit queued."
+  echo "Start one: ~/actions-runner-aluminium/run.sh on the Mac, or open a WSL terminal on the Windows PC."
+fi
 exit 0

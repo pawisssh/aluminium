@@ -11,6 +11,7 @@ Issues and specs for this repo live as GitHub issues. Use the `gh` CLI for all o
 - **Comment on an issue**: `gh issue comment <number> --body "..."`
 - **Apply / remove labels**: `gh issue edit <number> --add-label "..."` / `--remove-label "..."`
 - **Close**: `gh issue close <number> --comment "..."`
+- **Tick a criterion**: tick an acceptance criterion's box in the issue once a test or an output shows it: `gh issue view <number> --json body -q .body | sed 's/^- \[ \] <its first words>/- [x] <its first words>/' | gh issue edit <number> --body-file -` (leave the words out to tick every box). The `PR text` workflow fails a PR whose text closes an issue with an unticked criterion, unless the text lists each one under an `## Open criteria` heading as `- #<number>: <the criterion, and why it stays open>`.
 
 Infer the repo from `git remote -v`; `gh` does this automatically when run inside a clone.
 

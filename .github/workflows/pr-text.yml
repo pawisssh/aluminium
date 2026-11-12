@@ -4,7 +4,7 @@ on:
   pull_request:
     types: [opened, edited, reopened, synchronize]
 
-# The PR title and body use GLOSSARY.md's words too; editing them re-runs only this check.
+# The PR title and body use GLOSSARY.md's words too; editing them re-runs only these checks.
 jobs:
   glossary:
     runs-on: [self-hosted, aluminium]
@@ -14,3 +14,16 @@ jobs:
           TITLE: ${{ github.event.pull_request.title }}
           BODY: ${{ github.event.pull_request.body }}
         run: printf '%s\n\n%s\n' "$TITLE" "$BODY" | node scripts/check-glossary.mjs -
+
+  # A merge closes every issue the PR's text closes, whether its criteria are ticked or not.
+  criteria:
+    runs-on: [self-hosted, aluminium]
+    permissions:
+      contents: read
+      issues: read
+    steps:
+      - uses: actions/checkout@v4
+      - env:
+          BODY: ${{ github.event.pull_request.body }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: printf '%s\n' "$BODY" | node scripts/check-closed-criteria.mjs
