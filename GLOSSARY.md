@@ -89,7 +89,7 @@ In a Mix, a Plan colour with more than 50% but less than 75% of the Portfolio's 
 _Avoid_: Majority, main colour
 
 **Plan colour**:
-The colour family and Tint a Plan type is drawn in. Different Plan types may share a Plan colour when they are alike, and the Mix then counts them as one colour.
+The colour family and step a Plan type is drawn in: one of the four Tints, or 150, a darker step that only Green and Red have and only Mixture's table holds (`tools/mixture/src/core/colours.ts`). Plans mostly use 100, or 150 for Green and Red. Different Plan types may share a Plan colour when they are alike, and the Mix then counts them as one colour.
 _Avoid_: Theme colour
 
 **Colour family**:
@@ -97,5 +97,5 @@ One of the nine neon hues a Plan colour comes from, such as Purple or Navy.
 _Avoid_: family (on its own), hue
 
 **Tint**:
-One of the solid steps of a colour family: 100, 75, 50 or 25, and 150 for Green and Red. Plans mostly use 100, or 150 for Green and Red.
+One of the four solid steps of a colour family: 100, 75, 50 or 25. 150 is not a Tint: it is a step of a Plan colour, for Green and Red only (settled by the owner on 2026-11-14, Block's ADR 0015). Mixture's `Tint` type still holds 150 until its Plan colours are generated from Core's palette (pawisssh/block#122).
 _Avoid_: Shade, opacity
