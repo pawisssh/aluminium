@@ -6,11 +6,11 @@ Issues are tracked in GitHub Issues, using the `gh` CLI. See `docs/agents/issue-
 
 ### Triage labels
 
-Uses the default labels: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+Uses the default labels: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See the Finnomena home repo: ~/Projects/finnomena/home/docs/agents/triage-labels.md.
 
 ### Domain docs
 
-Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. How agents read them: ~/Projects/finnomena/home/docs/agents/domain.md. Terms shared with other Finnomena repos, and where they collide: ~/Projects/finnomena/home/GLOSSARY-MAP.md.
 
 ## Tools
 
