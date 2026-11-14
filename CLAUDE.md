@@ -19,3 +19,5 @@ Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. How agents r
 Commit messages and PR text are checked against GLOSSARY.md's _Avoid_ words, and a push to a branch whose PR has merged is stopped: by `.githooks/` once a clone runs `git config core.hooksPath .githooks`, and by `.github/workflows/pr-text.yml`.
 
 Other sessions may be working in `.claude/worktrees/*` at the same time: check `git worktree list` and open PRs before a rename that spans many files.
+
+Merge a pull request with `node scripts/merge-pr.mjs <n>`, run in the background. main has no branch protection, so GitHub merges a branch that is behind main. The script merges main into the branch in its worktree, pushes, waits for the checks, and merges main again if it moved meanwhile. It then merges only the head the checks passed on, as a merge commit (`--method squash` to squash). It stops on a conflict, naming the files, or on a failed check.
