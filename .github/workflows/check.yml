@@ -15,6 +15,10 @@ jobs:
     outputs:
       tools: ${{ steps.list.outputs.tools }}
     steps:
+      # Temp folders go to the runner's own temp, emptied every job: the WSL distro's /tmp is a RAM disk every runner
+      # on the PC shares, and tests filled it (pawisssh/design-system#1203). A step, since a job's env cannot read runner.
+      - name: Use the runner's temp folder
+        run: echo "TMPDIR=$RUNNER_TEMP" >> "$GITHUB_ENV"
       - uses: actions/checkout@v4
       - id: list
         run: echo "tools=$(ls -d tools/*/package.json | cut -d/ -f2 | jq -Rcs 'split("\n")[:-1]')" >> "$GITHUB_OUTPUT"
@@ -31,6 +35,10 @@ jobs:
       run:
         working-directory: tools/${{ matrix.tool }}
     steps:
+      # Temp folders go to the runner's own temp, emptied every job: the WSL distro's /tmp is a RAM disk every runner
+      # on the PC shares, and tests filled it (pawisssh/design-system#1203). A step, since a job's env cannot read runner.
+      - name: Use the runner's temp folder
+        run: echo "TMPDIR=$RUNNER_TEMP" >> "$GITHUB_ENV"
       # Two commits deep, so a pull request's merge commit can be compared with its base.
       - uses: actions/checkout@v4
         with:
@@ -59,6 +67,10 @@ jobs:
   repo-config:
     runs-on: [self-hosted, aluminium]
     steps:
+      # Temp folders go to the runner's own temp, emptied every job: the WSL distro's /tmp is a RAM disk every runner
+      # on the PC shares, and tests filled it (pawisssh/design-system#1203). A step, since a job's env cannot read runner.
+      - name: Use the runner's temp folder
+        run: echo "TMPDIR=$RUNNER_TEMP" >> "$GITHUB_ENV"
       - uses: actions/checkout@v4
       - run: jq -e . .claude/*.json > /dev/null
       - run: for f in scripts/*.sh .githooks/*; do sh -n "$f"; done

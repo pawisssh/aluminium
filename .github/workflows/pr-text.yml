@@ -9,6 +9,10 @@ jobs:
   glossary:
     runs-on: [self-hosted, aluminium]
     steps:
+      # Temp folders go to the runner's own temp, emptied every job: the WSL distro's /tmp is a RAM disk every runner
+      # on the PC shares, and tests filled it (pawisssh/design-system#1203). A step, since a job's env cannot read runner.
+      - name: Use the runner's temp folder
+        run: echo "TMPDIR=$RUNNER_TEMP" >> "$GITHUB_ENV"
       - uses: actions/checkout@v4
       - env:
           TITLE: ${{ github.event.pull_request.title }}
@@ -22,6 +26,10 @@ jobs:
       contents: read
       issues: read
     steps:
+      # Temp folders go to the runner's own temp, emptied every job: the WSL distro's /tmp is a RAM disk every runner
+      # on the PC shares, and tests filled it (pawisssh/design-system#1203). A step, since a job's env cannot read runner.
+      - name: Use the runner's temp folder
+        run: echo "TMPDIR=$RUNNER_TEMP" >> "$GITHUB_ENV"
       - uses: actions/checkout@v4
       - env:
           BODY: ${{ github.event.pull_request.body }}

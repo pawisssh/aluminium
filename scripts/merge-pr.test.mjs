@@ -1,7 +1,7 @@
 // Run from the repo root: node --test scripts/*.test.mjs
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { land, worktreeFor } from './merge-pr.mjs'
+import { failureCauses, land, worktreeFor } from './merge-pr.mjs'
 
 const ok = (stdout = '') => ({ status: 0, stdout, stderr: '' })
 const fail = (stderr) => ({ status: 1, stdout: '', stderr })
@@ -97,4 +97,35 @@ test('refuses local commits that were never pushed', async () => {
 test('gives up when main keeps moving', async () => {
   const { exec } = fake({ movesDuringChecks: [true, true] })
   await assert.rejects(land({ pr: 9, tries: 2, exec, ...quiet }), /main moved 2 times/)
+})
+
+// failureCauses: a scripted gh with two failed checks' logs.
+const failedChecks = JSON.stringify([
+  { name: 'check', bucket: 'fail', link: 'https://github.com/o/r/actions/runs/1/job/11' },
+  { name: 'lint', bucket: 'fail', link: 'https://github.com/o/r/actions/runs/1/job/12' },
+  { name: 'build', bucket: 'pass', link: 'https://github.com/o/r/actions/runs/1/job/13' },
+])
+const logs = {
+  '11': 'check\tTests\t2026-11-14T21:55:26.6357971Z mktemp: No space left on device (os error 28) at path "/tmp/tmp.x"\n',
+  '12': 'lint\tLint\t2026-11-14T21:55:26.1Z shell: bash\nlint\tLint\t2026-11-14T21:55:27.2Z Error: src/a.ts unused import\n',
+}
+const ghWithLogs = (command, args) => {
+  const line = [command, ...args].join(' ')
+  if (line.includes('pr checks 9 --json')) return ok(failedChecks)
+  const runner = /actions\/jobs\/(\d+)/.exec(line)
+  if (runner) return ok(`wsl-${runner[1]}\n`)
+  const log = /--job (\d+) --log-failed/.exec(line)
+  if (log) return ok(logs[log[1]] ?? '')
+  return ok()
+}
+
+test('failureCauses names the runner whose /tmp is full, and the first error of any other failed check', () => {
+  assert.deepEqual(failureCauses(ghWithLogs, 9), [
+    'check: runner wsl-11: /tmp is full (No space left on device); clear it, then rerun the check',
+    'lint: runner wsl-12: Error: src/a.ts unused import',
+  ])
+})
+
+test('failureCauses says nothing when gh cannot list the checks', () => {
+  assert.deepEqual(failureCauses(() => fail('gh: not found'), 9), [])
 })
