@@ -95,7 +95,7 @@ export async function land({ pr, tries = 6, method = 'merge', cwd = process.cwd(
       }
       log(`try ${attempt}: waiting for the checks on ${head.slice(0, 7)} (they sit queued while no aluminium runner is online: ${runnerStatus()})`)
       const checks = exec('gh', ['pr', 'checks', String(pr), '--watch', '--fail-fast', '--interval', '30'], { cwd })
-      if (checks.status !== 0) throw new Stop(`PR ${pr}: a check failed; not merging\n${exec('gh', ['pr', 'checks', String(pr)], { cwd }).stdout.trim()}`)
+      if (checks.status !== 0) throw new Stop(`PR ${pr}: a check failed; not merging\n${exec('gh', ['pr', 'checks', String(pr)], { cwd }).stdout.trim()}${failureCauses(exec, pr, { cwd }).map((cause) => `\n${cause}`).join('')}`)
       // No branch protection: this is where a branch behind main is caught.
       git(['fetch', '-q', 'origin', 'main'], 'git fetch failed')
       if (count('HEAD..origin/main') > 0) {
@@ -121,6 +121,29 @@ export async function land({ pr, tries = 6, method = 'merge', cwd = process.cwd(
     if (error instanceof Stop) throw new Error(error.message)
     throw error
   }
+}
+
+/**
+ * Each failed check's runner and the first telling line of its failed log. A full /tmp on a WSL runner fails every
+ * test at once and reads like a code failure; this names the runner to clear.
+ */
+export function failureCauses(exec, pr, { cwd } = {}) {
+  let checks
+  try {
+    checks = JSON.parse(exec('gh', ['pr', 'checks', String(pr), '--json', 'name,bucket,link'], { cwd }).stdout)
+  } catch {
+    return []
+  }
+  return checks.filter((check) => check.bucket === 'fail').flatMap(({ name, link }) => {
+    const job = /\/job\/(\d+)/.exec(link ?? '')?.[1]
+    if (!job) return []
+    const runner = exec('gh', ['api', `repos/{owner}/{repo}/actions/jobs/${job}`, '-q', '.runner_name'], { cwd }).stdout.trim() || 'unknown'
+    const lines = exec('gh', ['run', 'view', '--job', job, '--log-failed'], { cwd }).stdout.split('\n')
+    if (lines.some((line) => /No space left on device|ENOSPC/.test(line))) return [`${name}: runner ${runner}: /tmp is full (No space left on device); clear it, then rerun the check`]
+    const first = lines.find((line) => /\b(Error|FAIL|not ok)\b/.test(line))
+    const text = first?.split('\t').pop().replace(/^\d{4}-\d\d-\d\dT[\d:.]+Z /, '').trim().slice(0, 200)
+    return [`${name}: runner ${runner}${text ? `: ${text}` : ''}`]
+  })
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
